@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perennia Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    :root {
+      --navy:      #05214b;
+      --navy-deep: #000e28;
+      --gold:      #d0a030;
+      --gold-dim:  rgba(208,160,48,0.10);
+      --bg:        #F0EFEB;
+      --surface:   #ffffff;
+      --border:    #E2DFD9;
+      --text:      #1a1a1a;
+      --muted:     #737373;
+      --red:       #dc2626;
+      --green:     #16a34a;
+      --radius:    8px;
+      --sidebar:   240px;
+      --shadow:    0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══ LOGIN ══════════════════════════════════════════════ */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(150deg, var(--navy-deep) 0%, var(--navy) 60%, #2a4f7c 100%);
+    }
+
+    .login-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 2.5rem 2.25rem;
+      width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+
+    .login-brand { text-align: center; margin-bottom: 1.75rem; }
+    .login-brand-name { font-size: 1.4rem; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
+    .login-brand-name em { color: var(--gold); font-style: normal; }
+    .login-divider { width: 28px; height: 2px; background: var(--gold); margin: 0.6rem auto; border-radius: 2px; }
+    .login-brand-sub { font-size: 0.72rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--navy); margin-bottom: 0.35rem; letter-spacing: 0.04em; }
+    .field input { width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.88rem; color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.18s; }
+    .field input:focus { border-color: var(--navy); background: #fff; }
+
+    .login-error { display: none; background: #fef2f2; border: 1px solid #fecaca; color: var(--red); border-radius: var(--radius); padding: 0.6rem 0.85rem; font-size: 0.8rem; margin-bottom: 1rem; }
+
+    .btn-login { width: 100%; padding: 0.78rem; background: var(--gold); color: #fff; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.18s; }
+    .btn-login:hover { background: #b8911f; }
+    .login-hint { text-align: center; font-size: 0.7rem; color: #bbb; margin-top: 1rem; }
+
+    /* ══ APP ════════════════════════════════════════════════ */
+    #app { display: none; height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sidebar); height: 100vh;
+      background: var(--navy-deep);
+      display: flex; flex-direction: column;
+      overflow-y: auto; z-index: 50;
+    }
+
+    .sb-top { padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
+    .sb-logo { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+    .sb-logo em { color: var(--gold); font-style: normal; }
+    .sb-tag { font-size: 0.63rem; color: rgba(255,255,255,0.28); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.2rem; }
+
+    .sb-nav { flex: 1; padding: 0.75rem 0; }
+    .sb-section { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.24); padding: 0.9rem 1.25rem 0.35rem; }
+
+    .sb-item {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.6rem 1.25rem;
+      color: rgba(255,255,255,0.58); font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
+      border-left: 3px solid transparent; text-decoration: none;
+    }
+    .sb-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .sb-item.on { color: #fff; background: rgba(255,255,255,0.07); border-left-color: var(--gold); }
+    .sb-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.65; }
+    .sb-item.on svg { opacity: 1; }
+
+    .sb-foot { padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
+    .sb-user { font-size: 0.75rem; color: rgba(255,255,255,0.42); margin-bottom: 0.6rem; }
+    .sb-user strong { color: rgba(255,255,255,0.78); display: block; }
+    .btn-so { width: 100%; padding: 0.5rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius); color: rgba(255,255,255,0.48); font-family: inherit; font-size: 0.78rem; cursor: pointer; transition: all 0.18s; }
+    .btn-so:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.82); }
+
+    /* Main */
+    .main { margin-left: var(--sidebar); min-height: 100vh; display: flex; flex-direction: column; }
+
+    .topbar { position: sticky; top: 0; z-index: 40; background: rgba(240,239,235,0.93); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 1.75rem; height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .topbar-title { font-size: 0.9rem; font-weight: 600; color: var(--navy); }
+    .btn-prev { display: flex; align-items: center; gap: 0.4rem; padding: 0.42rem 1rem; background: transparent; border: 1.5px solid var(--border); border-radius: 100px; color: var(--muted); font-family: inherit; font-size: 0.76rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.18s; }
+    .btn-prev:hover { border-color: var(--navy); color: var(--navy); }
+
+    .content { flex: 1; padding: 1.75rem; max-width: 820px; }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.on { display: block; }
+
+    /* Page header */
+    .ph { margin-bottom: 1.5rem; }
+    .ph h1 { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 0.2rem; }
+    .ph p  { font-size: 0.82rem; color: var(--muted); }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.1rem; box-shadow: var(--shadow); }
+    .card-lbl { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.1rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--border); }
+
+    /* Forms */
+    .frow { margin-bottom: 1rem; }
+    .frow:last-child { margin-bottom: 0; }
+    .flabel { display: block; font-size: 0.73rem; font-weight: 600; color: var(--navy); margin-bottom: 0.3rem; letter-spacing: 0.03em; }
+    .badge { display: inline-block; font-size: 0.6rem; padding: 1px 6px; border-radius: 3px; font-weight: 700; margin-left: 5px; letter-spacing: 0.05em; }
+    .ben { background: var(--navy); color: #fff; }
+    .bar { background: var(--gold); color: #fff; }
+    .finput, .fselect, .fta { width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.85rem; color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.18s, background 0.18s; appearance: none; }
+    .finput:focus, .fselect:focus, .fta:focus { border-color: var(--navy); background: #fff; }
+    .fta { resize: vertical; min-height: 88px; }
+    .fhint { font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.5; }
+    .twin { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 680px) { .twin { grid-template-columns: 1fr; } }
+
+    /* Buttons */
+    .btn-save { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.75rem; background: var(--navy); color: #fff; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: background 0.18s; }
+    .btn-save:hover { background: var(--navy-deep); }
+    .btn-2 { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.25rem; background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.82rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.18s; }
+    .btn-2:hover { border-color: var(--navy); color: var(--navy); }
+    .btn-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+    /* Provider grid */
+    .prov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+    .prov-opt { cursor: pointer; }
+    .prov-opt input { position: absolute; opacity: 0; pointer-events: none; }
+    .prov-card { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; background: #fafaf8; text-align: center; transition: all 0.18s; }
+    .prov-opt input:checked + .prov-card { border-color: var(--navy); background: #f0f4fa; box-shadow: 0 0 0 3px rgba(31,58,95,0.08); }
+    .prov-card:hover { border-color: var(--navy); }
+    .prov-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; color: #fff; }
+    .prov-name { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+    .prov-desc { font-size: 0.65rem; color: var(--muted); line-height: 1.35; }
+
+    /* Model chips */
+    .mchips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .mchip { font-size: 0.7rem; padding: 3px 10px; background: transparent; border: 1px solid var(--border); border-radius: 100px; color: var(--muted); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .mchip:hover { border-color: var(--navy); color: var(--navy); }
+    .mchip.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+    /* Key wrap */
+    .key-wrap { position: relative; }
+    .key-wrap .finput { padding-right: 2.5rem; }
+    .eye { position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; padding: 0.2rem; transition: color 0.15s; line-height: 1; }
+    .eye:hover { color: var(--navy); }
+
+    /* Status pill */
+    .pill { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+    .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .pill-ok   { background: #dcfce7; color: #15803d; }
+    .pill-warn { background: #fef9c3; color: #a16207; }
+
+    /* Summary bar */
+    .sum-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding: 0.9rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.1rem; box-shadow: var(--shadow); }
+    .sum-text { font-size: 0.82rem; font-weight: 600; color: var(--navy); }
+    .sum-sub  { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+    /* Logo upload */
+    .logo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .logo-grid { grid-template-columns: 1fr; } }
+    .logo-prev { background: linear-gradient(135deg, var(--navy-deep), var(--navy)); border-radius: 10px; min-height: 100px; display: flex; align-items: center; justify-content: center; padding: 1rem; margin-bottom: 0.75rem; border: 1px solid rgba(201,162,39,0.2); }
+    .logo-prev img { max-height: 56px; max-width: 100%; object-fit: contain; }
+    .logo-empty { font-size: 0.75rem; color: rgba(255,255,255,0.22); text-align: center; }
+
+    .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 1.25rem 1rem; text-align: center; cursor: pointer; transition: all 0.18s; background: #fafaf8; }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--gold); background: var(--gold-dim); }
+    .dz-icon  { font-size: 1.4rem; margin-bottom: 0.35rem; color: var(--muted); }
+    .dz-label { font-size: 0.78rem; font-weight: 600; color: var(--navy); margin-bottom: 0.2rem; }
+    .dz-sub   { font-size: 0.68rem; color: var(--muted); }
+    .up-res { display: none; margin-top: 0.6rem; padding: 0.55rem 0.8rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 500; }
+    .up-ok  { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+    .up-err { background: #fef2f2; border: 1px solid #fecaca; color: var(--red); }
+
+    /* Knowledge-base file list */
+    .kb-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; background: #fafaf8; border: 1px solid var(--border); border-radius: var(--radius); }
+    .kb-item-name { font-size: 0.8rem; font-weight: 600; color: var(--navy); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kb-item-meta { font-size: 0.68rem; color: var(--muted); flex-shrink: 0; }
+    .kb-item-del { flex-shrink: 0; background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--red); font-family: inherit; font-size: 0.7rem; font-weight: 600; padding: 0.3rem 0.6rem; cursor: pointer; transition: all 0.15s; }
+    .kb-item-del:hover { background: #fef2f2; border-color: #fecaca; }
+    .kb-empty { font-size: 0.78rem; color: var(--muted); padding: 0.5rem 0.1rem; }
+
+    /* Dashboard tiles */
+    .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin-bottom: 1.25rem; }
+    .dash-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; cursor: pointer; transition: all 0.18s; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 0.5rem; }
+    .dash-tile:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.09); }
+    .d-icon { font-size: 1.2rem; }
+    .d-name { font-size: 0.8rem; font-weight: 600; color: var(--navy); }
+    .d-desc { font-size: 0.7rem; color: var(--muted); }
+
+    /* Info box */
+    .info { background: #f0f4fa; border: 1px solid #c7d9f0; border-radius: var(--radius); padding: 0.85rem 1rem; font-size: 0.78rem; color: var(--navy); line-height: 1.6; }
+    .info a { color: var(--navy); font-weight: 600; }
+    code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 3px; font-size: 0.85em; font-family: monospace; }
+    hr.div { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(12px); background: #111; color: #fff; padding: 0.6rem 1.4rem; border-radius: 100px; font-size: 0.82rem; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.25s ease; white-space: nowrap; z-index: 1000; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.ok  { background: #166534; }
+    #toast.err { background: #991b1b; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-name">PEREN<em>NIA</em></div>
+      <div class="login-divider"></div>
+      <div class="login-brand-sub">Admin Panel</div>
+    </div>
+    <div class="login-error" id="lerr">Incorrect username or password.</div>
+    <div class="field"><label>Username</label><input type="text" id="lu" placeholder="admin" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input type="password" id="lp" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn-login" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-logo">PEREN<em>NIA</em></div>
+      <div class="sb-tag">Admin Panel</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Overview</div>
+      <a class="sb-item on" data-p="dash" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sb-section">AI</div>
+      <a class="sb-item" data-p="ai" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+        Provider & Model
+      </a>
+      <a class="sb-item" data-p="assistant" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>
+        Persona & Files
+      </a>
+      <div class="sb-section">Content</div>
+      <a class="sb-item" data-p="chat" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat Knowledge
+      </a>
+      <a class="sb-item" data-p="contact" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.07 1.17h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></svg>
+        Contact Details
+      </a>
+      <div class="sb-section">Assets</div>
+      <a class="sb-item" data-p="logo" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Logo Upload
+      </a>
+      <div class="sb-section">Engagement</div>
+      <a class="sb-item" data-p="appt" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Appointments
+      </a>
+      <div class="sb-section">Site</div>
+      <a class="sb-item" href="index.html" target="_blank">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Open Website
+      </a>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-user"><strong id="sb-user">admin</strong>Administrator</div>
+      <button class="btn-so" onclick="signout()">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="tb-title">Dashboard</span>
+      <a href="index.html" target="_blank" class="btn-prev">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Preview Site
+      </a>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="panel on" id="p-dash">
+        <div class="ph"><h1>Welcome back</h1><p>Manage your Perennia website from here.</p></div>
+        <div class="dash-grid">
+          <div class="dash-tile" onclick="navTo('ai')">
+            <div class="d-icon">🤖</div>
+            <div class="d-name">AI Provider</div>
+            <div class="d-desc" id="d-ai">Not configured</div>
+          </div>
+          <div class="dash-tile" onclick="navTo('chat')">
+            <div class="d-icon">💬</div>
+            <div class="d-name">Chat Knowledge</div>
+            <div class="d-desc">Edit what the AI knows</div>
+          </div>
+          <div class="dash-tile" onclick="navTo('assistant')">
+            <div class="d-icon">🧑‍💼</div>
+            <div class="d-name">Persona & Files</div>
+            <div class="d-desc" id="d-assistant">Default avatar & tone</div>
+          </div>
+          <div class="dash-tile" onclick="navTo('contact')">
+            <div class="d-icon">📞</div>
+            <div class="d-name">Contact Details</div>
+            <div class="d-desc">Email, phone, address</div>
+          </div>
+          <div class="dash-tile" onclick="navTo('logo')">
+            <div class="d-icon">🖼️</div>
+            <div class="d-name">Logo Upload</div>
+            <div class="d-desc" id="d-logo">No logo uploaded</div>
+          </div>
+          <div class="dash-tile" onclick="navTo('appt')">
+            <div class="d-icon">📅</div>
+            <div class="d-name">Appointments</div>
+            <div class="d-desc">Bookings & daily activity</div>
+          </div>
+        </div>
+        <div class="info">
+          <strong>Getting started:</strong><br>
+          1. Go to <strong>Provider & Model</strong> — add your API key so the chat works.<br>
+          2. Go to <strong>Logo Upload</strong> — upload your English and Arabic logos.<br>
+          3. Click <strong>Open Website</strong> to see it live.
+        </div>
+      </div>
+
+      <!-- AI PROVIDER -->
+      <div class="panel" id="p-ai">
+        <div class="ph"><h1>AI Provider & Model</h1><p>Choose which AI powers the visitor chat on your website.</p></div>
+
+        <div class="sum-bar">
+          <div><div class="sum-text" id="ai-sum">Not configured</div><div class="sum-sub">Current configuration</div></div>
+          <span class="pill pill-warn" id="ai-pill"><span class="dot"></span> Not configured</span>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">① Choose Provider</div>
+          <div class="prov-grid">
+            <label class="prov-opt">
+              <input type="radio" name="prov" value="anthropic" checked onchange="onProv()">
+              <div class="prov-card">
+                <div class="prov-icon" style="background:linear-gradient(135deg,#1e1b4b,#3730a3)">A</div>
+                <div class="prov-name">Anthropic</div>
+                <div class="prov-desc">Claude Sonnet, Opus, Haiku</div>
+              </div>
+            </label>
+            <label class="prov-opt">
+              <input type="radio" name="prov" value="deepseek" onchange="onProv()">
+              <div class="prov-card">
+                <div class="prov-icon" style="background:linear-gradient(135deg,#003d82,#0060cc)">D</div>
+                <div class="prov-name">DeepSeek</div>
+                <div class="prov-desc">DeepSeek-V3, R1</div>
+              </div>
+            </label>
+            <label class="prov-opt">
+              <input type="radio" name="prov" value="openai" onchange="onProv()">
+              <div class="prov-card">
+                <div class="prov-icon" style="background:linear-gradient(135deg,#065f46,#059669)">G</div>
+                <div class="prov-name">OpenAI</div>
+                <div class="prov-desc">GPT-4o, GPT-4, GPT-3.5</div>
+              </div>
+            </label>
+            <label class="prov-opt">
+              <input type="radio" name="prov" value="custom" onchange="onProv()">
+              <div class="prov-card">
+                <div class="prov-icon" style="background:linear-gradient(135deg,#6b21a8,#9333ea)">⚙</div>
+                <div class="prov-name">Custom</div>
+                <div class="prov-desc">Any OpenAI-compatible</div>
+              </div>
+            </label>
+          </div>
+          <div class="frow" id="custom-url-row" style="display:none">
+            <label class="flabel">API Base URL</label>
+            <input type="url" class="finput" id="base-url" placeholder="https://your-api.com/v1">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">② API Key</div>
+          <div class="frow">
+            <label class="flabel" id="key-lbl">Anthropic API Key</label>
+            <div class="key-wrap">
+              <input type="password" class="finput" id="api-key" placeholder="sk-ant-…" autocomplete="off">
+              <button class="eye" onclick="toggleEye()">👁</button>
+            </div>
+            <p class="fhint" id="key-hint">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">③ Model</div>
+          <div class="mchips" id="mchips"></div>
+          <div class="frow">
+            <label class="flabel">Model name</label>
+            <input type="text" class="finput" id="model" placeholder="claude-sonnet-4-6">
+            <p class="fhint">Click a preset above or type any model name.</p>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-bottom:1.25rem">
+          <button class="btn-save" onclick="saveAI()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Save Settings
+          </button>
+          <button class="btn-2" onclick="testAI()">Test Connection</button>
+        </div>
+
+        <hr class="div">
+        <div class="info">
+          Your API key is encrypted and stored on the server only. It is never sent to this browser again after you save it, and it is only ever attached to requests the server itself makes to the provider you choose above.<br><br>
+          <strong>Docs:</strong>
+          <a href="https://console.anthropic.com" target="_blank">Anthropic</a> ·
+          <a href="https://platform.deepseek.com" target="_blank">DeepSeek</a> ·
+          <a href="https://platform.openai.com" target="_blank">OpenAI</a>
+        </div>
+      </div>
+
+      <!-- CHAT KNOWLEDGE -->
+      <div class="panel" id="p-chat">
+        <div class="ph"><h1>Chat Knowledge</h1><p>What the AI knows about Perennia. Edit freely — saved changes apply immediately.</p></div>
+
+        <div class="card">
+          <div class="card-lbl">Company Overview</div>
+          <div class="twin">
+            <div class="frow">
+              <label class="flabel">About <span class="badge ben">EN</span></label>
+              <textarea class="fta" id="ck-about-en"></textarea>
+            </div>
+            <div class="frow">
+              <label class="flabel">About <span class="badge bar">AR</span></label>
+              <textarea class="fta" id="ck-about-ar" dir="rtl"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Vision & Mission</div>
+          <div class="twin">
+            <div>
+              <div class="frow">
+                <label class="flabel">Vision <span class="badge ben">EN</span></label>
+                <textarea class="fta" id="ck-vision-en" style="min-height:68px"></textarea>
+              </div>
+              <div class="frow">
+                <label class="flabel">Mission <span class="badge ben">EN</span></label>
+                <textarea class="fta" id="ck-mission-en" style="min-height:68px"></textarea>
+              </div>
+            </div>
+            <div>
+              <div class="frow">
+                <label class="flabel">Vision <span class="badge bar">AR</span></label>
+                <textarea class="fta" id="ck-vision-ar" dir="rtl" style="min-height:68px"></textarea>
+              </div>
+              <div class="frow">
+                <label class="flabel">Mission <span class="badge bar">AR</span></label>
+                <textarea class="fta" id="ck-mission-ar" dir="rtl" style="min-height:68px"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Solutions</div>
+          <div class="twin">
+            <div class="frow">
+              <label class="flabel">Solutions <span class="badge ben">EN</span></label>
+              <textarea class="fta" id="ck-solutions-en" style="min-height:120px"></textarea>
+              <p class="fhint">One solution per line.</p>
+            </div>
+            <div class="frow">
+              <label class="flabel">Solutions <span class="badge bar">AR</span></label>
+              <textarea class="fta" id="ck-solutions-ar" dir="rtl" style="min-height:120px"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Products & Industries</div>
+          <div class="twin">
+            <div class="frow">
+              <label class="flabel">Products <span class="badge ben">EN</span></label>
+              <textarea class="fta" id="ck-products-en" style="min-height:100px"></textarea>
+            </div>
+            <div class="frow">
+              <label class="flabel">Industries <span class="badge ben">EN</span></label>
+              <textarea class="fta" id="ck-industries-en" style="min-height:100px"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-save" onclick="saveCK()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Knowledge
+        </button>
+      </div>
+
+      <!-- ASSISTANT PERSONA & FILES -->
+      <div class="panel" id="p-assistant">
+        <div class="ph"><h1>Assistant Persona &amp; Knowledge Files</h1><p>Give the chat assistant a face, a tone of voice, and extra documents to draw on when answering visitors.</p></div>
+
+        <div class="card">
+          <div class="card-lbl">Assistant Avatar</div>
+          <div class="logo-grid" style="grid-template-columns:140px 1fr; margin-bottom:0">
+            <div class="logo-prev" id="prev-avatar" style="min-height:90px"><div class="logo-empty">No avatar uploaded</div></div>
+            <div>
+              <div class="drop-zone" id="zone-avatar" onclick="document.getElementById('file-avatar').click()" ondragover="dOver(event,'zone-avatar')" ondragleave="dLeave('zone-avatar')" ondrop="dDropAvatar(event)">
+                <div class="dz-icon">↑</div>
+                <div class="dz-label" id="dz-lbl-avatar">Click or drag &amp; drop</div>
+                <div class="dz-sub">PNG · JPEG · WEBP · square image recommended · max 4 MB</div>
+              </div>
+              <input type="file" id="file-avatar" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="fileChosenAvatar(this)">
+              <div class="up-res" id="res-avatar"></div>
+            </div>
+          </div>
+          <p class="fhint" style="margin-top:0.85rem">Replaces the default letter avatar in the chat window. Leave empty to keep the default.</p>
+          <div class="btn-row" style="margin-top:0.75rem">
+            <button class="btn-2" onclick="clearAvatar()">Remove Avatar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Chat Tone &amp; Persona</div>
+          <div class="frow">
+            <label class="flabel">How should the assistant sound?</label>
+            <textarea class="fta" id="ai-tone" style="min-height:100px" placeholder="e.g. Warm, concise, and consultative. Use short sentences, avoid jargon, and always offer to connect the visitor with the team for pricing or timelines."></textarea>
+            <p class="fhint">Optional. Added to the assistant's instructions for every reply, alongside the Chat Knowledge above.</p>
+          </div>
+          <button class="btn-save" onclick="saveTone()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Save Tone
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Knowledge Base Files</div>
+          <div class="drop-zone" id="zone-kb" onclick="document.getElementById('file-kb').click()" ondragover="dOver(event,'zone-kb')" ondragleave="dLeave('zone-kb')" ondrop="dDropKb(event)">
+            <div class="dz-icon">↑</div>
+            <div class="dz-label">Click or drag &amp; drop files</div>
+            <div class="dz-sub">.txt · .md · .pdf · .docx · max 8 MB each</div>
+          </div>
+          <input type="file" id="file-kb" accept=".txt,.md,.pdf,.docx" multiple style="display:none" onchange="fileChosenKb(this)">
+          <div class="up-res" id="res-kb"></div>
+          <div id="kb-list" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.5rem"></div>
+          <p class="fhint" style="margin-top:0.85rem">Uploaded files are read on the server and their text is given to the assistant so it can use them when answering visitor questions.</p>
+        </div>
+      </div>
+
+      <!-- CONTACT -->
+      <div class="panel" id="p-contact">
+        <div class="ph"><h1>Contact Details</h1><p>Shared with visitors who ask how to reach Perennia.</p></div>
+        <div class="card">
+          <div class="card-lbl">Contact Information</div>
+          <div class="frow"><label class="flabel">Email</label><input type="email" class="finput" id="ct-email" placeholder="info@perennia.com"></div>
+          <div class="frow"><label class="flabel">Phone</label><input type="text" class="finput" id="ct-phone" placeholder="+965 0000 0000"></div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Address <span class="badge ben">EN</span></label><input type="text" class="finput" id="ct-addr-en" placeholder="Kuwait City, Kuwait"></div>
+            <div class="frow"><label class="flabel">Address <span class="badge bar">AR</span></label><input type="text" class="finput" id="ct-addr-ar" dir="rtl" placeholder="الكويت"></div>
+          </div>
+        </div>
+        <button class="btn-save" onclick="saveContact()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Contact Details
+        </button>
+      </div>
+
+      <!-- LOGO UPLOAD -->
+      <div class="panel" id="p-logo">
+        <div class="ph"><h1>Logo Upload</h1><p>Upload your English and Arabic logos. PNG, JPEG, or WEBP with a transparent background recommended (SVG is not accepted, for security reasons).</p></div>
+
+        <div class="logo-grid" style="margin-bottom:1.1rem">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-lbl">English Logo</div>
+            <div class="logo-prev" id="prev-en"><div class="logo-empty">No logo uploaded yet</div></div>
+            <div class="drop-zone" id="zone-en" onclick="document.getElementById('file-en').click()" ondragover="dOver(event,'zone-en')" ondragleave="dLeave('zone-en')" ondrop="dDrop(event,'en')">
+              <div class="dz-icon">↑</div>
+              <div class="dz-label" id="dz-lbl-en">Click or drag & drop</div>
+              <div class="dz-sub">PNG · JPEG · WEBP · max 8 MB</div>
+            </div>
+            <input type="file" id="file-en" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="fileChosen('en',this)">
+            <div class="up-res" id="res-en"></div>
+          </div>
+
+          <div class="card" style="margin-bottom:0">
+            <div class="card-lbl">Arabic Logo</div>
+            <div class="logo-prev" id="prev-ar"><div class="logo-empty">No logo uploaded yet</div></div>
+            <div class="drop-zone" id="zone-ar" onclick="document.getElementById('file-ar').click()" ondragover="dOver(event,'zone-ar')" ondragleave="dLeave('zone-ar')" ondrop="dDrop(event,'ar')">
+              <div class="dz-icon">↑</div>
+              <div class="dz-label" id="dz-lbl-ar">Click or drag & drop</div>
+              <div class="dz-sub">PNG · JPEG · WEBP · max 8 MB</div>
+            </div>
+            <input type="file" id="file-ar" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="fileChosen('ar',this)">
+            <div class="up-res" id="res-ar"></div>
+          </div>
+        </div>
+
+        <div class="info" style="margin-bottom:1.1rem">
+          Logos with a <strong>transparent background</strong> look best on the dark website background.
+          Upload both EN and AR versions so the language toggle shows the correct logo.
+          Uploads are saved permanently on the server and shown to every visitor immediately.
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-2" onclick="clearLogo('en')">Remove EN Logo</button>
+          <button class="btn-2" onclick="clearLogo('ar')">Remove AR Logo</button>
+        </div>
+      </div>
+
+      <!-- ENGAGEMENT: appointments + daily interaction summary -->
+      <div class="panel" id="p-appt">
+        <div class="ph"><h1>Appointments</h1><p>Visitor bookings and day-by-day chat activity.</p></div>
+
+        <div class="card">
+          <div class="card-lbl">Daily Interaction Summary</div>
+          <div class="dash-grid" id="stat-tiles" style="margin-bottom:1.1rem"></div>
+          <div class="kb-list" id="daily-list" style="display:flex;flex-direction:column;gap:0.5rem">
+            <div class="kb-empty">Loading…</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:0">
+          <div class="card-lbl">Upcoming & Recent Bookings</div>
+          <div class="kb-list" id="appt-list" style="display:flex;flex-direction:column;gap:0.5rem">
+            <div class="kb-empty">Loading…</div>
+          </div>
+        </div>
+
+        <div class="info" id="gcal-status" style="margin-top:1.1rem"></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   PERENNIA ADMIN JS
+════════════════════════════════════════════════ */
+
+// ── Auth ─────────────────────────────────────────
+// CSRF token lives only in memory (never localStorage/sessionStorage),
+// issued by the server at login and required on every state-changing
+// admin request via the X-CSRF-Token header.
+let csrfToken = null;
+
+async function doLogin() {
+  const u = document.getElementById('lu').value.trim();
+  const p = document.getElementById('lp').value;
+  const errEl = document.getElementById('lerr');
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      csrfToken = data.csrfToken;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('sb-user').textContent = data.username;
+      init();
+    } else {
+      errEl.textContent = data.detail || 'Invalid username or password.';
+      errEl.style.display = 'block';
+      setTimeout(() => errEl.style.display = 'none', 3000);
+    }
+  } catch {
+    errEl.textContent = 'Could not reach the server.';
+    errEl.style.display = 'block';
+    setTimeout(() => errEl.style.display = 'none', 3000);
+  }
+}
+
+async function signout() {
+  try { await fetch('/api/admin/logout', { method: 'POST' }); } catch {}
+  csrfToken = null;
+  location.reload();
+}
+
+// ── Authenticated fetch helper: always sends the CSRF header on
+//    state-changing requests, and bounces to the login screen if the
+//    session has expired server-side. ─────────────────────────────
+async function adminFetch(url, options = {}) {
+  const opts = { credentials: 'same-origin', ...options };
+  opts.headers = { ...(opts.headers || {}) };
+  if (options.method && options.method !== 'GET') {
+    opts.headers['X-CSRF-Token'] = csrfToken;
+  }
+  const res = await fetch(url, opts);
+  if (res.status === 401) {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    throw new Error('Session expired');
+  }
+  return res;
+}
+
+document.getElementById('lp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ── Navigation ────────────────────────────────────
+const TITLES = { dash:'Dashboard', ai:'Provider & Model', assistant:'Persona & Files', chat:'Chat Knowledge', contact:'Contact Details', logo:'Logo Upload', appt:'Appointments' };
+
+function go(el) {
+  event.preventDefault();
+  document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  const id = el.dataset.p;
+  document.getElementById('p-' + id).classList.add('on');
+  document.getElementById('tb-title').textContent = TITLES[id] || '';
+}
+
+function navTo(id) { const el = document.querySelector(`[data-p="${id}"]`); if (el) go(el); }
+
+// ── Toast ─────────────────────────────────────────
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type ? `show ${type}` : 'show';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = '', 3000);
+}
+
+// ── Server config (single source of truth — no localStorage) ──────
+// The API key itself is never part of this object; the server only
+// ever reports whether one is set, plus a masked hint like "sk-f…6cb9".
+let serverConfig = null;
+
+async function fetchConfig() {
+  const res = await adminFetch('/api/admin/config');
+  serverConfig = await res.json();
+  return serverConfig;
+}
+
+async function patchConfig(partial) {
+  const res = await adminFetch('/api/admin/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(partial)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Save failed');
+  }
+  serverConfig = await res.json();
+  return serverConfig;
+}
+
+// ── AI ────────────────────────────────────────────
+const PRESETS = {
+  anthropic: ['claude-sonnet-4-6', 'claude-opus-4-6', 'claude-haiku-4-5-20251001'],
+  deepseek:  ['deepseek-chat', 'deepseek-reasoner'],
+  openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  custom:    [],
+};
+
+const KEY_INFO = {
+  anthropic: ['Anthropic API Key', 'sk-ant-…', 'Get key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>'],
+  deepseek:  ['DeepSeek API Key',  'sk-…',     'Get key at <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a>'],
+  openai:    ['OpenAI API Key',    'sk-…',     'Get key at <a href="https://platform.openai.com" target="_blank">platform.openai.com</a>'],
+  custom:    ['API Key',           'your-key', 'Enter the key for your custom provider.'],
+};
+
+function prov() { return document.querySelector('input[name="prov"]:checked')?.value || 'anthropic'; }
+
+function onProv() {
+  const p = prov();
+  const [lbl, ph, hint] = KEY_INFO[p];
+  document.getElementById('key-lbl').textContent = lbl;
+  document.getElementById('api-key').placeholder = ph;
+  document.getElementById('key-hint').innerHTML = hint;
+  document.getElementById('custom-url-row').style.display = p === 'custom' ? 'block' : 'none';
+  buildChips(p);
+}
+
+function buildChips(p) {
+  const cur = document.getElementById('model').value;
+  const el  = document.getElementById('mchips');
+  el.innerHTML = '';
+  (PRESETS[p] || []).forEach(m => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mchip' + (m === cur ? ' on' : '');
+    b.textContent = m;
+    b.onclick = () => {
+      document.getElementById('model').value = m;
+      el.querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    };
+    el.appendChild(b);
+  });
+  if (!cur && PRESETS[p]?.length) {
+    document.getElementById('model').value = PRESETS[p][0];
+    el.querySelector('.mchip')?.classList.add('on');
+  }
+}
+
+function toggleEye() {
+  const i = document.getElementById('api-key');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+
+document.getElementById('api-key').addEventListener('input', function () {
+  this.dataset.changed = '1';
+});
+
+function loadAI() {
+  const cfg = serverConfig || {};
+  if (cfg.provider) { const r = document.querySelector(`input[name="prov"][value="${cfg.provider}"]`); if (r) r.checked = true; }
+  onProv();
+  const keyInput = document.getElementById('api-key');
+  keyInput.value = '';
+  keyInput.dataset.changed = '0';
+  keyInput.placeholder = cfg.apiKeySet
+    ? `Saved key: ${cfg.apiKeyMasked} — leave blank to keep it, type to replace`
+    : KEY_INFO[prov()][1];
+  if (cfg.model)   document.getElementById('model').value   = cfg.model;
+  if (cfg.baseUrl) document.getElementById('base-url').value = cfg.baseUrl;
+  buildChips(prov());
+  updateAIStatus(cfg);
+}
+
+function updateAIStatus(cfg) {
+  const names = { anthropic:'Anthropic', deepseek:'DeepSeek', openai:'OpenAI', custom:'Custom' };
+  const sum  = document.getElementById('ai-sum');
+  const pill = document.getElementById('ai-pill');
+  const dtile = document.getElementById('d-ai');
+
+  if (!cfg?.apiKeySet) {
+    sum.textContent  = 'No API key set';
+    pill.className   = 'pill pill-warn';
+    pill.innerHTML   = '<span class="dot"></span> Not configured';
+    if (dtile) dtile.textContent = 'Not configured';
+  } else {
+    const label = `${names[cfg.provider] || cfg.provider} · ${cfg.model || '—'}`;
+    sum.textContent  = label;
+    pill.className   = 'pill pill-ok';
+    pill.innerHTML   = '<span class="dot"></span> Configured';
+    if (dtile) dtile.textContent = label;
+  }
+}
+
+async function saveAI() {
+  const keyInput = document.getElementById('api-key');
+  const keyChanged = keyInput.dataset.changed === '1';
+  const typedKey = keyInput.value.trim();
+
+  if (!serverConfig?.apiKeySet && !typedKey) {
+    toast('Enter an API key first.', 'err');
+    return;
+  }
+
+  const p = prov();
+  const payload = {
+    provider: p,
+    model: document.getElementById('model').value.trim() || PRESETS[p][0] || '',
+    baseUrl: document.getElementById('base-url')?.value.trim() || ''
+  };
+  if (keyChanged) {
+    if (typedKey) payload.apiKey = typedKey;
+    else payload.clearApiKey = true; // admin cleared the field on purpose
+  }
+
+  try {
+    await patchConfig(payload);
+    loadAI();
+    toast('✔ Saved', 'ok');
+  } catch (e) {
+    toast(`✗ ${e.message}`, 'err');
+  }
+}
+
+async function testAI() {
+  const keyInput = document.getElementById('api-key');
+  const body = {
+    provider: prov(),
+    model: document.getElementById('model').value.trim(),
+    baseUrl: document.getElementById('base-url')?.value.trim() || ''
+  };
+  if (keyInput.dataset.changed === '1' && keyInput.value.trim()) {
+    body.apiKey = keyInput.value.trim();
+  } else if (!serverConfig?.apiKeySet) {
+    toast('Enter an API key first.', 'err');
+    return;
+  }
+  toast('Testing…');
+  try {
+    const res = await adminFetch('/api/admin/test-connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    toast(data.ok ? '✔ Connection successful!' : `✗ ${data.message}`, data.ok ? 'ok' : 'err');
+  } catch {
+    toast('✗ Could not reach server.', 'err');
+  }
+}
+
+// ── Chat Knowledge ────────────────────────────────
+const CK_DEFAULTS = {
+  'ck-about-en':     'Perennia is an AI-powered technology and innovation company dedicated to helping organizations and individuals overcome challenges, improve performance, and unlock new opportunities through intelligent, practical, and affordable solutions.',
+  'ck-about-ar':     'بيرينيا شركة تكنولوجيا وابتكار مدعومة بالذكاء الاصطناعي، مكرسة لمساعدة المؤسسات والأفراد على التغلب على التحديات وتحسين الأداء وفتح آفاق جديدة من خلال حلول ذكية وعملية وميسورة التكلفة.',
+  'ck-vision-en':    'To become a trusted partner in solving complex challenges and creating sustainable opportunities through intelligent innovation.',
+  'ck-vision-ar':    'أن نكون شريكاً موثوقاً في حل التحديات المعقدة وخلق فرص مستدامة من خلال الابتكار الذكي.',
+  'ck-mission-en':   "To design and deliver practical, intelligent, and affordable AI-powered solutions that help organizations and individuals solve today's challenges and prepare for tomorrow's opportunities.",
+  'ck-mission-ar':   'تصميم وتقديم حلول ذكية وعملية وميسورة التكلفة مدعومة بالذكاء الاصطناعي.',
+  'ck-solutions-en': 'Perennia AI Business — AI Dashboards, Knowledge Assistants, Research, Reporting\nPerennia AI Automation — Workflow, Documents, Communication, Data Collection\nPerennia AI Digital — Websites, Portals, Mobile Apps, SaaS Platforms\nPerennia AI Personal — Financial, Productivity, Learning, Health Assistants',
+  'ck-solutions-ar': 'بيرينيا للأعمال — لوحات تحكم، مساعدو المعرفة، بحث، تقارير\nبيرينيا للأتمتة — سير عمل، مستندات، تواصل، جمع بيانات\nبيرينيا الرقمية — مواقع، بوابات، تطبيقات، منصات\nبيرينيا الشخصية — مالي، إنتاجية، تعلم، صحة',
+  'ck-products-en':  'Perennia Insight™ — AI research & market intelligence\nPerennia Flow™ — AI automation platform\nPerennia Pulse™ — AI executive intelligence\nPerennia Personal™ — AI assistant for everyday life',
+  'ck-industries-en':'Government, Energy & Oil and Gas, Manufacturing, Education, Healthcare, SMEs, Professionals, Entrepreneurs, Families',
+};
+
+function loadCK() {
+  const saved = (serverConfig && serverConfig.knowledge) || {};
+  Object.entries(CK_DEFAULTS).forEach(([id, def]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = id in saved ? saved[id] : def;
+  });
+}
+
+async function saveCK() {
+  const data = {};
+  Object.keys(CK_DEFAULTS).forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+  try {
+    await patchConfig({ knowledge: data });
+    toast('✔ Knowledge saved', 'ok');
+  } catch (e) {
+    toast(`✗ ${e.message}`, 'err');
+  }
+}
+
+// ── Assistant: Tone & Persona ──────────────────────────────
+function loadTone() {
+  const el = document.getElementById('ai-tone');
+  if (el) el.value = (serverConfig && serverConfig.tone) || '';
+}
+
+async function saveTone() {
+  try {
+    await patchConfig({ tone: document.getElementById('ai-tone').value.trim() });
+    toast('✔ Tone saved', 'ok');
+  } catch (e) {
+    toast(`✗ ${e.message}`, 'err');
+  }
+}
+
+// ── Assistant: Avatar ───────────────────────────────────────
+function loadAvatarPreview() {
+  const prev = document.getElementById('prev-avatar');
+  const src = 'static/images/ai_avatar.png?t=' + Date.now();
+  const img = new Image();
+  img.onload = () => {
+    prev.innerHTML = `<img src="${src}" alt="Assistant avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover">`;
+    document.getElementById('d-assistant').textContent = 'Custom avatar set';
+  };
+  img.onerror = () => {
+    prev.innerHTML = '<div class="logo-empty">No avatar uploaded</div>';
+    document.getElementById('d-assistant').textContent = 'Default avatar & tone';
+  };
+  img.src = src;
+}
+
+function dDropAvatar(e) { e.preventDefault(); dLeave('zone-avatar'); const f = e.dataTransfer?.files[0]; if (f) processAvatar(f); }
+function fileChosenAvatar(inp) { const f = inp.files[0]; if (f) processAvatar(f); inp.value = ''; }
+
+async function processAvatar(file) {
+  const resEl = document.getElementById('res-avatar');
+  if (file.size > 4 * 1024 * 1024) { showRes(resEl, 'File too large — max 4 MB', 'err'); return; }
+  if (!file.type.startsWith('image/')) { showRes(resEl, 'Unsupported type — use PNG, JPEG or WEBP', 'err'); return; }
+
+  try {
+    const form = new FormData();
+    form.append('avatar', file);
+    const res = await adminFetch('/api/admin/upload-avatar', { method: 'POST', body: form });
+    if (res.ok) {
+      showRes(resEl, `✔ ${file.name} saved`, 'ok');
+      toast('✔ Avatar saved', 'ok');
+      loadAvatarPreview();
+      return;
+    }
+    const err = await res.json().catch(() => ({}));
+    showRes(resEl, `✗ ${err.detail || 'Upload failed'}`, 'err');
+  } catch {
+    showRes(resEl, '✗ Could not reach server.', 'err');
+  }
+}
+
+async function clearAvatar() {
+  try {
+    await adminFetch('/api/admin/delete-avatar', { method: 'POST' });
+  } catch {}
+  loadAvatarPreview();
+  document.getElementById('res-avatar').style.display = 'none';
+  toast('Avatar removed', 'ok');
+}
+
+// ── Assistant: Knowledge Base Files ────────────────────────
+async function loadKbList() {
+  try {
+    const res = await adminFetch('/api/admin/knowledge');
+    const files = res.ok ? await res.json() : [];
+    renderKbList(Array.isArray(files) ? files : []);
+  } catch {
+    renderKbList([]);
+  }
+}
+
+function renderKbList(files) {
+  const listEl = document.getElementById('kb-list');
+  if (!files.length) {
+    listEl.innerHTML = '<div class="kb-empty">No files uploaded yet.</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  files.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'kb-item';
+    const statusText = f.ok ? `${f.chars.toLocaleString()} chars` : 'not extracted';
+    row.innerHTML = `
+      <span class="kb-item-name">${f.filename}</span>
+      <span class="kb-item-meta">${statusText}${f.truncated ? ' · truncated' : ''}</span>
+      <button class="kb-item-del" data-id="${f.id}">Remove</button>
+    `;
+    row.querySelector('.kb-item-del').onclick = () => deleteKbFile(f.id);
+    listEl.appendChild(row);
+  });
+}
+
+function dDropKb(e) { e.preventDefault(); dLeave('zone-kb'); const files = e.dataTransfer?.files; if (files?.length) uploadKbFiles(files); }
+function fileChosenKb(inp) { if (inp.files?.length) uploadKbFiles(inp.files); inp.value = ''; }
+
+async function uploadKbFiles(fileList) {
+  const resEl = document.getElementById('res-kb');
+  const files = Array.from(fileList);
+  let okCount = 0, errCount = 0, lastErr = '';
+
+  for (const file of files) {
+    if (file.size > 8 * 1024 * 1024) { errCount++; lastErr = `${file.name} is too large (max 8 MB)`; continue; }
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await adminFetch('/api/admin/upload-knowledge', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) { okCount++; } else { errCount++; lastErr = data.error || data.detail || `${file.name} failed to upload`; }
+    } catch {
+      errCount++; lastErr = 'Could not reach server.';
+    }
+  }
+
+  if (okCount) { showRes(resEl, `✔ ${okCount} file${okCount > 1 ? 's' : ''} uploaded`, 'ok'); toast('✔ Knowledge files uploaded', 'ok'); }
+  if (errCount) { showRes(resEl, `✗ ${errCount} file${errCount > 1 ? 's' : ''} failed — ${lastErr}`, 'err'); }
+  loadKbList();
+}
+
+async function deleteKbFile(id) {
+  try {
+    await adminFetch('/api/admin/delete-knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+  } catch {}
+  toast('File removed', 'ok');
+  loadKbList();
+}
+
+// ── Contact ───────────────────────────────────────
+const CT_DEFAULTS = { 'ct-email':'info@perennia.com', 'ct-phone':'+965 0000 0000', 'ct-addr-en':'Kuwait', 'ct-addr-ar':'الكويت' };
+
+function loadContact() {
+  const saved = (serverConfig && serverConfig.contact) || {};
+  Object.entries(CT_DEFAULTS).forEach(([id, def]) => { const el = document.getElementById(id); if (el) el.value = id in saved ? saved[id] : def; });
+}
+
+async function saveContact() {
+  const data = {};
+  Object.keys(CT_DEFAULTS).forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+  try {
+    await patchConfig({ contact: data });
+    toast('✔ Contact details saved', 'ok');
+  } catch (e) {
+    toast(`✗ ${e.message}`, 'err');
+  }
+}
+
+// ── Logo ──────────────────────────────────────────
+function loadLogos() {
+  ['en', 'ar'].forEach(lng => {
+    const src = `static/images/logo_${lng}.png?t=` + Date.now();
+    const img = new Image();
+    img.onload = () => {
+      document.getElementById(`prev-${lng}`).innerHTML = `<img src="${src}" alt="Logo ${lng.toUpperCase()}">`;
+      document.getElementById('d-logo').textContent = 'Logo uploaded';
+    };
+    img.onerror = () => {
+      document.getElementById(`prev-${lng}`).innerHTML = '<div class="logo-empty">No logo uploaded yet</div>';
+    };
+    img.src = src;
+  });
+}
+
+function dOver(e, id)  { e.preventDefault(); document.getElementById(id).classList.add('over'); }
+function dLeave(id)    { document.getElementById(id).classList.remove('over'); }
+function dDrop(e, lng) { e.preventDefault(); dLeave(`zone-${lng}`); const f = e.dataTransfer?.files[0]; if (f) processLogo(lng, f); }
+function fileChosen(lng, inp) { const f = inp.files[0]; if (f) processLogo(lng, f); inp.value = ''; }
+
+async function processLogo(lng, file) {
+  const resEl = document.getElementById(`res-${lng}`);
+  const lblEl = document.getElementById(`dz-lbl-${lng}`);
+
+  if (file.size > 8 * 1024 * 1024) { showRes(resEl, 'File too large — max 8 MB', 'err'); return; }
+  if (!file.type.startsWith('image/')) { showRes(resEl, 'Unsupported type — use PNG, JPEG or WEBP', 'err'); return; }
+
+  try {
+    const form = new FormData();
+    form.append('lang', lng);
+    form.append('logo', file);
+    const res = await adminFetch('/api/admin/upload-logo', { method: 'POST', body: form });
+    if (res.ok) {
+      showRes(resEl, `✔ ${file.name} saved`, 'ok');
+      toast(`✔ ${lng.toUpperCase()} logo saved`, 'ok');
+      lblEl.textContent = file.name;
+      document.getElementById('d-logo').textContent = 'Logo uploaded';
+      loadLogos();
+      return;
+    }
+    const err = await res.json().catch(() => ({}));
+    showRes(resEl, `✗ ${err.detail || 'Upload failed'}`, 'err');
+  } catch {
+    showRes(resEl, '✗ Could not reach server.', 'err');
+  }
+}
+
+function showRes(el, msg, type) { el.textContent = msg; el.className = `up-res ${type === 'ok' ? 'up-ok' : 'up-err'}`; el.style.display = 'block'; }
+
+async function clearLogo(lng) {
+  try {
+    await adminFetch('/api/admin/delete-logo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lang: lng })
+    });
+  } catch {}
+  loadLogos();
+  document.getElementById(`res-${lng}`).style.display = 'none';
+  document.getElementById(`dz-lbl-${lng}`).textContent = 'Click or drag & drop';
+  toast(`${lng.toUpperCase()} logo removed`, 'ok');
+}
+
+// ── Engagement: daily interaction summary + appointments ──────────
+function statTile(icon, name, value) {
+  const div = document.createElement('div');
+  div.className = 'dash-tile';
+  div.style.cursor = 'default';
+  div.innerHTML = `<div class="d-icon">${icon}</div><div class="d-name">${value}</div><div class="d-desc">${name}</div>`;
+  return div;
+}
+
+async function loadAnalytics() {
+  const tilesEl = document.getElementById('stat-tiles');
+  const listEl = document.getElementById('daily-list');
+  const gcalEl = document.getElementById('gcal-status');
+  try {
+    const res = await adminFetch('/api/admin/analytics/daily?days=14');
+    const data = await res.json();
+    const rows = data.days || [];
+
+    const totals = rows.reduce((a, r) => ({
+      messages: a.messages + r.messages,
+      sessions: a.sessions + r.sessions,
+      appointments: a.appointments + r.appointments,
+    }), { messages: 0, sessions: 0, appointments: 0 });
+
+    tilesEl.innerHTML = '';
+    tilesEl.appendChild(statTile('💬', 'Messages (14d)', totals.messages.toLocaleString()));
+    tilesEl.appendChild(statTile('👥', 'Sessions (14d)', totals.sessions.toLocaleString()));
+    tilesEl.appendChild(statTile('📅', 'Appointments (14d)', totals.appointments.toLocaleString()));
+
+    if (!rows.length) {
+      listEl.innerHTML = '<div class="kb-empty">No chat activity recorded yet.</div>';
+    } else {
+      listEl.innerHTML = '';
+      rows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'kb-item';
+        row.innerHTML = `
+          <span class="kb-item-name" style="flex:0 0 110px">${r.date}</span>
+          <span class="kb-item-meta">${r.sessions} session${r.sessions===1?'':'s'}</span>
+          <span class="kb-item-meta">${r.messages} message${r.messages===1?'':'s'}</span>
+          <span class="kb-item-meta">${r.appointments} booked</span>
+        `;
+        listEl.appendChild(row);
+      });
+    }
+
+    gcalEl.textContent = data.calendarConfigured
+      ? '✔ Google Calendar sync is active — new bookings appear on the shared calendar automatically.'
+      : 'Google Calendar sync isn\'t configured yet — bookings are still recorded here, but won\'t appear on a calendar until GOOGLE_SERVICE_ACCOUNT_FILE and GOOGLE_CALENDAR_ID are set in .env.';
+  } catch {
+    listEl.innerHTML = '<div class="kb-empty">Could not load analytics.</div>';
+  }
+}
+
+function fmtApptTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  } catch { return iso; }
+}
+
+async function loadAppointments() {
+  const listEl = document.getElementById('appt-list');
+  try {
+    const res = await adminFetch('/api/admin/appointments');
+    const entries = await res.json();
+    if (!entries.length) {
+      listEl.innerHTML = '<div class="kb-empty">No appointments booked yet.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    entries.forEach(a => {
+      const cancelled = a.status === 'cancelled';
+      const row = document.createElement('div');
+      row.className = 'kb-item';
+      row.innerHTML = `
+        <span class="kb-item-name" style="flex:1 1 160px">${a.name}${cancelled ? ' (cancelled)' : ''}</span>
+        <span class="kb-item-meta">${fmtApptTime(a.start)}</span>
+        <span class="kb-item-meta">${a.email}</span>
+        <span class="kb-item-meta">${a.calendar_event_id ? '📅 synced' : 'not synced'}</span>
+      `;
+      if (!cancelled) {
+        const btn = document.createElement('button');
+        btn.className = 'kb-item-del';
+        btn.textContent = 'Cancel';
+        btn.onclick = () => cancelAppointment(a.id);
+        row.appendChild(btn);
+      }
+      listEl.appendChild(row);
+    });
+  } catch {
+    listEl.innerHTML = '<div class="kb-empty">Could not load appointments.</div>';
+  }
+}
+
+async function cancelAppointment(id) {
+  try {
+    await adminFetch('/api/admin/appointments/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    toast('✔ Appointment cancelled', 'ok');
+    loadAppointments();
+    loadAnalytics();
+  } catch (e) {
+    toast(`✗ ${e.message || 'Could not cancel'}`, 'err');
+  }
+}
+
+// ── Init ──────────────────────────────────────────
+async function init() {
+  try {
+    await fetchConfig();
+  } catch {
+    serverConfig = {};
+    toast('✗ Could not load settings from server', 'err');
+  }
+  loadAI();
+  loadCK();
+  loadTone();
+  loadAvatarPreview();
+  loadKbList();
+  loadContact();
+  loadLogos();
+  loadAnalytics();
+  loadAppointments();
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('/api/admin/session', { credentials: 'same-origin' });
+    if (res.ok) {
+      const data = await res.json();
+      csrfToken = data.csrfToken;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('sb-user').textContent = data.username;
+      init();
+    }
+  } catch {}
+});
+</script>
+</body>
+</html>

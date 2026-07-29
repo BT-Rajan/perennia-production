@@ -1,0 +1,10 @@
+.env
+data/*.json
+!data/.gitkeep
+public/static/images/logo_en.png
+public/static/images/logo_ar.png
+public/static/images/ai_avatar.png
+__pycache__/
+*.pyc
+.venv/
+venv/

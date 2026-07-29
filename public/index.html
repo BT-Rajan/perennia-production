@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PERENNIA | بيرينيا</title>
+  <meta name="description" content="Perennia — AI-powered technology and innovation. Solving Today. Shaping Tomorrow.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Noto+Kufi+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+
+    :root {
+      /* ── Exact colors sampled from official Perennia logos ── */
+      --navy-1: #000e28;
+      --navy-2: #001030;
+      --navy-3: #041a3e;
+      --navy-4: #05214b;
+      --navy-5: #0a2d5e;
+      --navy-6: #123870;
+      --blue-mid: #1e4d8c;
+      --blue-light: #2d6aad;
+      --white-soft: #e8eef8;
+      --white-pure: #ffffff;
+      --gold: #d0a030;
+      --gold-dim: rgba(208,160,48,0.16);
+      --gold-border: rgba(208,160,48,0.30);
+      --glass: rgba(255,255,255,0.055);
+      --glass-border: rgba(255,255,255,0.10);
+      --muted: rgba(255,255,255,0.50);
+      --font-en-display: 'Cormorant Garamond', Georgia, serif;
+      --font-en: 'Inter', system-ui, sans-serif;
+      --font-ar: 'Noto Kufi Arabic', 'Arial Unicode MS', sans-serif;
+    }
+
+    body {
+      min-height: 100%;
+      font-family: var(--font-en);
+      /* Multi-stop gradient: deep navy → mid-blue → lighter blue → white-ish */
+      background:
+        radial-gradient(ellipse 100% 55% at 50% -5%, rgba(208,160,48,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 70% at 15% 85%, rgba(4,26,62,0.95) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 70% at 88% 15%, rgba(18,56,112,0.35) 0%, transparent 50%),
+        linear-gradient(160deg,
+          var(--navy-1) 0%,
+          var(--navy-2) 15%,
+          var(--navy-3) 32%,
+          var(--navy-4) 50%,
+          var(--navy-5) 66%,
+          var(--navy-6) 78%,
+          #1e4d8c 88%,
+          #3a6eb8 100%
+        );
+      background-attachment: fixed;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Mesh overlay for depth ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, black 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Lang toggle ── */
+    .lang-bar {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 200;
+      display: flex;
+      gap: 8px;
+      transition: right 0.3s, left 0.3s;
+    }
+    [dir="rtl"] .lang-bar { right: auto; left: 20px; }
+
+    .theme-btn {
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      width: 32px;
+      height: 32px;
+      border-radius: 100px;
+      cursor: pointer;
+      backdrop-filter: blur(16px);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-btn:hover {
+      background: var(--gold-dim);
+      border-color: var(--gold-border);
+      color: var(--gold);
+    }
+
+    .lang-btn {
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+      font-family: var(--font-en);
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 7px 18px;
+      border-radius: 100px;
+      cursor: pointer;
+      backdrop-filter: blur(16px);
+      transition: all 0.2s ease;
+    }
+    .lang-btn:hover {
+      background: var(--gold-dim);
+      border-color: var(--gold-border);
+      color: var(--gold);
+    }
+
+    /* ── Main layout ── */
+    main {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3.5rem 1.5rem 2.5rem;
+      gap: 0;
+    }
+
+    .inner {
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Chat wrap: chat-shell is untouched; FAQ sidebar is
+         absolutely positioned off to its left so it never
+         affects the chat's own centering on screen ── */
+    .chat-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    /* ── FAQ sidebar ── */
+    .faq-sidebar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: calc(100% + 18px);
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 18px;
+      background: linear-gradient(145deg,
+        rgba(255,255,255,0.07) 0%,
+        rgba(107,170,232,0.05) 50%,
+        rgba(255,255,255,0.03) 100%
+      );
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow:
+        0 0 0 1px rgba(201,162,39,0.06),
+        0 8px 28px rgba(0,0,0,0.26),
+        inset 0 1px 0 rgba(255,255,255,0.10);
+      backdrop-filter: blur(24px);
+      padding: 16px 14px;
+      overflow-y: auto;
+    }
+
+    .faq-title {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
+    [dir="rtl"] .faq-title { letter-spacing: 0; text-align: right; }
+
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .faq-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 10px;
+      color: rgba(255,255,255,0.72);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 9px 11px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      flex-shrink: 0;
+    }
+    [dir="rtl"] .faq-item { text-align: right; }
+    [dir="rtl"] .faq-item, [dir="rtl"] .faq-item * { font-family: var(--font-ar); }
+
+    .faq-item:hover {
+      background: var(--gold-dim);
+      border-color: var(--gold-border);
+      color: #fff;
+    }
+    .faq-item strong { color: var(--gold); font-weight: 600; }
+    .faq-item:hover strong { color: var(--gold); }
+    .faq-item:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Responsive: stack FAQ above chat on narrower viewports
+         (there isn't enough room beside the chat card) ── */
+    @media (max-width: 1180px) {
+      .faq-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        margin-bottom: 14px;
+      }
+      .faq-list { flex-direction: row; flex-wrap: wrap; }
+      .faq-item { width: auto; flex: 1 1 auto; }
+    }
+
+    /* ── LOGO ── */
+    .logo-wrap {
+      margin-bottom: 32px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-wrap::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px; height: 180px;
+      background: radial-gradient(ellipse, rgba(208,160,48,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo-img {
+      height: 80px;
+      width: auto;
+      max-width: 480px;
+      display: block;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 2px 24px rgba(208,160,48,0.20));
+      transition: filter 0.4s ease;
+    }
+
+    .logo-img:hover {
+      filter: drop-shadow(0 2px 36px rgba(208,160,48,0.38));
+    }
+
+    /* ── Tagline ── */
+    .tagline-wrap {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .tagline-main {
+      font-family: var(--font-en-display);
+      font-size: clamp(1.55rem, 3.2vw, 2.3rem);
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    [dir="rtl"] .tagline-main {
+      font-family: var(--font-ar);
+      font-weight: 500;
+    }
+
+    .tagline-main .gold { color: var(--gold); }
+
+    .tagline-divider {
+      width: 44px;
+      height: 1.5px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 12px auto;
+    }
+
+    .tagline-sub {
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.42);
+    }
+    [dir="rtl"] .tagline-sub { letter-spacing: 0; }
+
+    /* ── Chat shell ── */
+    .chat-shell {
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      /* Glassmorphism with blue-tinted glass */
+      background: linear-gradient(145deg,
+        rgba(255,255,255,0.08) 0%,
+        rgba(107,170,232,0.06) 50%,
+        rgba(255,255,255,0.04) 100%
+      );
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow:
+        0 0 0 1px rgba(201,162,39,0.07),
+        0 8px 32px rgba(0,0,0,0.30),
+        0 32px 80px rgba(0,0,0,0.22),
+        inset 0 1px 0 rgba(255,255,255,0.12);
+      backdrop-filter: blur(24px);
+    }
+
+    /* Chat header */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(107,170,232,0.05), rgba(255,255,255,0.03));
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74,222,128,0.55);
+      flex-shrink: 0;
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+    .chat-header-text {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      font-weight: 400;
+    }
+    .chat-header-text b { color: var(--gold); font-weight: 600; }
+
+    /* Messages */
+    .chat-messages {
+      height: 300px;
+      overflow-y: auto;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 3px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: rgba(201,162,39,0.25); border-radius: 3px; }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: msgIn 0.28s ease both;
+    }
+    @keyframes msgIn { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+
+    .msg.user { flex-direction: row-reverse; }
+    [dir="rtl"] .msg.ai  { flex-direction: row-reverse; }
+    [dir="rtl"] .msg.user { flex-direction: row; }
+
+    .avatar {
+      width: 29px; height: 29px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .msg.ai .avatar {
+      background: linear-gradient(135deg, var(--navy-3), var(--navy-5));
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
+      font-family: var(--font-en-display);
+      font-size: 15px;
+    }
+
+    .msg.user .avatar {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      font-size: 10px;
+    }
+
+    .bubble {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13.5px;
+      line-height: 1.72;
+    }
+
+    .msg.ai .bubble {
+      background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(107,170,232,0.07));
+      border: 1px solid rgba(255,255,255,0.09);
+      color: rgba(255,255,255,0.88);
+      border-bottom-left-radius: 3px;
+    }
+    [dir="rtl"] .msg.ai .bubble { border-bottom-left-radius: 14px; border-bottom-right-radius: 3px; }
+
+    .msg.user .bubble {
+      background: linear-gradient(135deg, var(--gold), #b8881a);
+      color: #fff;
+      font-weight: 500;
+      border-bottom-right-radius: 3px;
+    }
+    [dir="rtl"] .msg.user .bubble { border-bottom-right-radius: 14px; border-bottom-left-radius: 3px; }
+
+    /* Typing dots */
+    .typing-bubble {
+      display: flex;
+      gap: 4px;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(107,170,232,0.07));
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 14px;
+      border-bottom-left-radius: 3px;
+    }
+    [dir="rtl"] .typing-bubble { border-bottom-left-radius: 14px; border-bottom-right-radius: 3px; }
+
+    .typing-bubble span {
+      width: 5px; height: 5px;
+      background: rgba(201,162,39,0.65);
+      border-radius: 50%;
+      animation: bounce 1.1s ease-in-out infinite;
+    }
+    .typing-bubble span:nth-child(2) { animation-delay: 0.18s; }
+    .typing-bubble span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.45} 30%{transform:translateY(-5px);opacity:1} }
+
+    /* Chips */
+    .chips {
+      padding: 0 16px 12px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 5px 12px;
+      background: transparent;
+      border: 1px solid rgba(201,162,39,0.28);
+      border-radius: 100px;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      background: var(--gold-dim);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* Input area */
+    .chat-input-area {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 12px 14px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      background: linear-gradient(90deg, rgba(0,0,0,0.10), rgba(15,32,64,0.15));
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13.5px;
+      line-height: 1.5;
+      padding: 9px 13px;
+      resize: none;
+      min-height: 40px;
+      max-height: 110px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    [dir="rtl"] .chat-input { text-align: right; font-family: var(--font-ar); }
+    .chat-input::placeholder { color: rgba(255,255,255,0.28); }
+    .chat-input:focus { border-color: rgba(201,162,39,0.45); }
+
+    .send-btn {
+      width: 40px; height: 40px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--gold);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .send-btn:hover:not(:disabled) { background: #b8881a; transform: scale(1.05); }
+    .send-btn:disabled { background: rgba(201,162,39,0.25); cursor: not-allowed; transform: none; }
+    .send-btn svg { width: 16px; height: 16px; }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 18px;
+      font-size: 10.5px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 540px) {
+      .logo-img { height: 80px; max-width: 90vw; }
+      .chat-messages { height: 240px; }
+      main { padding: 2.5rem 1rem 1.5rem; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       LIGHT THEME — toggled via .theme-light on <body>
+       (default theme; dark remains available via the toggle)
+    ══════════════════════════════════════════════════════════ */
+    body.theme-light {
+      color: #16233f;
+      background:
+        radial-gradient(ellipse 100% 55% at 50% -5%, rgba(208,160,48,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 70% at 15% 85%, rgba(200,220,245,0.55) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 70% at 88% 15%, rgba(180,205,235,0.45) 0%, transparent 50%),
+        linear-gradient(160deg,
+          #f7f9fc 0%,
+          #f2f6fb 20%,
+          #eef3fa 40%,
+          #e9f0f9 60%,
+          #e3edf8 80%,
+          #dbe7f5 100%
+        );
+    }
+    body.theme-light::before { background-image: linear-gradient(rgba(10,30,70,0.028) 1px, transparent 1px), linear-gradient(90deg, rgba(10,30,70,0.028) 1px, transparent 1px); }
+
+    body.theme-light .tagline-main { color: #16233f; }
+    body.theme-light .tagline-sub  { color: rgba(22,35,63,0.45); }
+
+    body.theme-light .theme-btn,
+    body.theme-light .lang-btn {
+      background: rgba(20,40,80,0.06);
+      border-color: rgba(20,40,80,0.14);
+      color: rgba(22,35,63,0.6);
+    }
+    body.theme-light .theme-btn:hover,
+    body.theme-light .lang-btn:hover { background: var(--gold-dim); border-color: var(--gold-border); color: #a3781f; }
+
+    body.theme-light .faq-sidebar {
+      background: linear-gradient(145deg, rgba(255,255,255,0.75) 0%, rgba(220,235,250,0.55) 50%, rgba(255,255,255,0.65) 100%);
+      border-color: rgba(20,40,80,0.10);
+      box-shadow: 0 0 0 1px rgba(201,162,39,0.10), 0 8px 28px rgba(30,60,110,0.10), inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    body.theme-light .faq-item {
+      background: rgba(20,40,80,0.035);
+      border-color: rgba(20,40,80,0.10);
+      color: rgba(22,35,63,0.72);
+    }
+    body.theme-light .faq-item:hover { background: var(--gold-dim); border-color: var(--gold-border); color: #16233f; }
+
+    body.theme-light .chat-shell {
+      background: linear-gradient(145deg, rgba(255,255,255,0.80) 0%, rgba(220,235,250,0.55) 50%, rgba(255,255,255,0.70) 100%);
+      border-color: rgba(20,40,80,0.10);
+      box-shadow: 0 0 0 1px rgba(201,162,39,0.10), 0 8px 32px rgba(30,60,110,0.12), 0 32px 80px rgba(30,60,110,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    body.theme-light .chat-header {
+      background: linear-gradient(90deg, rgba(20,60,120,0.03), rgba(107,170,232,0.06), rgba(20,60,120,0.02));
+      border-bottom-color: rgba(20,40,80,0.08);
+    }
+    body.theme-light .chat-header-text { color: rgba(22,35,63,0.6); }
+
+    body.theme-light .msg.ai .avatar {
+      background: linear-gradient(135deg, #eaf1fb, #dbe8f7);
+      border-color: var(--gold-border);
+      color: #a3781f;
+    }
+    body.theme-light .msg.user .avatar {
+      background: rgba(20,40,80,0.07);
+      border-color: rgba(20,40,80,0.14);
+      color: rgba(22,35,63,0.55);
+    }
+
+    body.theme-light .msg.ai .bubble {
+      background: linear-gradient(135deg, rgba(20,60,120,0.045), rgba(107,170,232,0.07));
+      border-color: rgba(20,40,80,0.08);
+      color: rgba(22,35,63,0.86);
+    }
+    body.theme-light .typing-bubble {
+      background: linear-gradient(135deg, rgba(20,60,120,0.045), rgba(107,170,232,0.07));
+      border-color: rgba(20,40,80,0.08);
+    }
+
+    body.theme-light .chip {
+      color: rgba(22,35,63,0.55);
+    }
+    body.theme-light .chip:hover { color: #a3781f; }
+
+    body.theme-light .chat-input-area {
+      background: linear-gradient(90deg, rgba(20,40,80,0.025), rgba(20,60,120,0.04));
+      border-top-color: rgba(20,40,80,0.07);
+    }
+    body.theme-light .chat-input {
+      background: rgba(20,40,80,0.045);
+      border-color: rgba(20,40,80,0.14);
+      color: #16233f;
+    }
+    body.theme-light .chat-input::placeholder { color: rgba(22,35,63,0.32); }
+    body.theme-light .chat-input:focus { border-color: rgba(201,162,39,0.55); }
+
+    body.theme-light footer { color: rgba(22,35,63,0.35); }
+
+    /* ── Appointment CTA button (inside chat bubbles) ── */
+    .cta-row { margin-top: 8px; }
+    .cta-btn {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--gold-border);
+      background: var(--gold-dim);
+      color: var(--gold);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cta-btn:hover { background: var(--gold); color: #fff; }
+
+    /* ── Booking modal ── */
+    .booking-overlay {
+      position: fixed; inset: 0; z-index: 999;
+      background: rgba(0,6,20,0.62);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .booking-overlay.open { display: flex; }
+    .booking-modal {
+      width: 100%; max-width: 440px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: linear-gradient(160deg, var(--navy-3), var(--navy-1));
+      border: 1px solid var(--gold-border);
+      border-radius: 18px;
+      padding: 22px 22px 18px;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    body.theme-light .booking-modal {
+      background: linear-gradient(160deg, #fdfdfd, #eef2f8);
+      border-color: rgba(20,40,80,0.14);
+    }
+    .booking-close {
+      position: absolute; top: 14px; right: 14px;
+      background: none; border: none; color: rgba(255,255,255,0.4);
+      font-size: 15px; cursor: pointer; line-height: 1;
+    }
+    [dir="rtl"] .booking-close { right: auto; left: 14px; }
+    body.theme-light .booking-close { color: rgba(22,35,63,0.4); }
+    .booking-head h3 { font-family: var(--font-en-display); font-size: 21px; color: #fff; font-weight: 600; margin-bottom: 4px; }
+    body.theme-light .booking-head h3 { color: #16233f; }
+    [dir="rtl"] .booking-head h3 { font-family: var(--font-ar); }
+    .booking-head p { font-size: 12.5px; color: rgba(255,255,255,0.5); margin-bottom: 16px; }
+    body.theme-light .booking-head p { color: rgba(22,35,63,0.55); }
+
+    .bk-field { margin-bottom: 12px; }
+    .bk-field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: rgba(255,255,255,0.55); margin-bottom: 5px; text-transform: uppercase; }
+    body.theme-light .bk-field label { color: rgba(22,35,63,0.5); }
+    .bk-field input, .bk-field textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13.5px;
+      padding: 9px 12px;
+      outline: none;
+      resize: vertical;
+    }
+    .bk-field input:focus, .bk-field textarea:focus { border-color: rgba(201,162,39,0.5); }
+    body.theme-light .bk-field input, body.theme-light .bk-field textarea {
+      background: rgba(20,40,80,0.045); border-color: rgba(20,40,80,0.14); color: #16233f;
+    }
+    .bk-field input[type="date"] { color-scheme: dark; }
+    body.theme-light .bk-field input[type="date"] { color-scheme: light; }
+
+    .bk-slots { display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto; padding: 2px; }
+    .bk-slots-empty { font-size: 12px; color: rgba(255,255,255,0.35); padding: 6px 2px; }
+    body.theme-light .bk-slots-empty { color: rgba(22,35,63,0.4); }
+    .bk-slot {
+      font-size: 12px; padding: 6px 11px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.13); background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.75); cursor: pointer; font-family: inherit;
+    }
+    .bk-slot:hover { border-color: var(--gold-border); color: var(--gold); }
+    .bk-slot.picked { background: var(--gold); border-color: var(--gold); color: #fff; font-weight: 600; }
+    body.theme-light .bk-slot { background: rgba(20,40,80,0.04); border-color: rgba(20,40,80,0.12); color: rgba(22,35,63,0.7); }
+
+    .bk-err { font-size: 12px; color: #e0654f; min-height: 16px; margin-top: 2px; }
+
+    .booking-foot { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-2 {
+      flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.7); cursor: pointer; font-family: inherit;
+    }
+    body.theme-light .btn-2 { background: rgba(20,40,80,0.05); border-color: rgba(20,40,80,0.14); color: rgba(22,35,63,0.7); }
+    .send-btn-wide {
+      flex: 1.4; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+      background: var(--gold); border: none; color: #fff; cursor: pointer; font-family: inherit;
+    }
+    .send-btn-wide:hover:not(:disabled) { background: #b8881a; }
+    .send-btn-wide:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .booking-success { text-align: center; padding: 20px 6px 6px; }
+    .bk-success-icon {
+      width: 46px; height: 46px; border-radius: 50%; margin: 0 auto 12px;
+      background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--gold);
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    #bk-success-msg { font-size: 13.5px; color: rgba(255,255,255,0.8); line-height: 1.6; }
+    body.theme-light #bk-success-msg { color: rgba(22,35,63,0.8); }
+  </style>
+</head>
+
+<body class="theme-light">
+<script>(function(){try{if(localStorage.getItem('perennia_theme')==='dark'){document.body.classList.remove('theme-light');}}catch(e){}})();</script>
+
+
+  <div class="lang-bar">
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle light / dark">☀</button>
+    <button class="chip" id="book-btn" onclick="openBooking()" style="white-space:nowrap">📅 <span id="book-btn-label">Book a call</span></button>
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()">AR | عربي</button>
+  </div>
+
+  <main>
+    <div class="inner">
+
+      <!-- LOGO — both rendered at identical 80px CSS height -->
+      <div class="logo-wrap">
+        <img class="logo-img" id="logo-en"
+             src="static/images/logo_en.png"
+             width="192" height="80"
+             alt="Perennia — Solving Today. Shaping Tomorrow."
+             style="display:block; image-rendering:-webkit-optimize-contrast;">
+        <img class="logo-img" id="logo-ar"
+             src="static/images/logo_ar.png"
+             width="171" height="80"
+             alt="بيرينيا — حلول اليوم. لصناعة الغد."
+             style="display:none; image-rendering:-webkit-optimize-contrast;">
+      </div>
+
+      <!-- FAQ + CHAT — chat-shell itself is completely unchanged -->
+      <div class="chat-wrap">
+
+        <!-- FAQ sidebar -->
+        <aside class="faq-sidebar">
+          <div class="faq-title" id="faq-title">FAQ</div>
+          <div class="faq-list" id="faq-list"></div>
+        </aside>
+
+        <!-- CHAT -->
+        <div class="chat-shell">
+          <div class="chat-header">
+            <div class="status-dot"></div>
+            <p class="chat-header-text" id="chat-header"></p>
+          </div>
+          <div class="chat-messages" id="messages"></div>
+          <div class="chips" id="chips"></div>
+          <div class="chat-input-area">
+            <textarea class="chat-input" id="input" rows="1"></textarea>
+            <button class="send-btn" id="send-btn" onclick="send()" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>© 2024 PERENNIA · بيرينيا</footer>
+
+  <div class="booking-overlay" id="booking-overlay" onclick="if(event.target===this) closeBooking()">
+    <div class="booking-modal">
+      <button class="booking-close" onclick="closeBooking()">✕</button>
+
+      <div id="bk-form-wrap">
+        <div class="booking-head">
+          <h3 id="bk-title">Book a call with Perennia</h3>
+          <p id="bk-sub">Pick a time that works for you — we'll confirm by email.</p>
+        </div>
+
+        <div class="bk-field">
+          <label id="bk-lbl-date">Date</label>
+          <input type="date" id="bk-date" oninput="loadSlots()">
+        </div>
+        <div class="bk-field">
+          <label id="bk-lbl-slot">Available times</label>
+          <div class="bk-slots" id="bk-slots"><div class="bk-slots-empty" id="bk-slots-msg">Pick a date to see available times</div></div>
+        </div>
+        <div class="bk-field"><label id="bk-lbl-name">Name</label><input id="bk-name" type="text" maxlength="120" autocomplete="name"></div>
+        <div class="bk-field"><label id="bk-lbl-email">Email</label><input id="bk-email" type="email" autocomplete="email"></div>
+        <div class="bk-field"><label id="bk-lbl-phone">Phone (optional)</label><input id="bk-phone" type="tel" autocomplete="tel"></div>
+        <div class="bk-field"><label id="bk-lbl-service">What are you interested in? (optional)</label><input id="bk-service" type="text" maxlength="200"></div>
+        <div class="bk-field"><label id="bk-lbl-notes">Notes (optional)</label><textarea id="bk-notes" rows="2" maxlength="1000"></textarea></div>
+        <div class="bk-err" id="bk-err"></div>
+
+        <div class="booking-foot">
+          <button class="btn-2" id="bk-cancel-btn" onclick="closeBooking()">Cancel</button>
+          <button class="send-btn-wide" id="bk-submit-btn" onclick="submitBooking()">Confirm Booking</button>
+        </div>
+      </div>
+
+      <div class="booking-success" id="bk-success" style="display:none">
+        <div class="bk-success-icon">✓</div>
+        <div id="bk-success-msg"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   PERENNIA AI — VISITOR CHAT
+   All provider/config/knowledge-base logic now lives server-side.
+   The browser only ever exchanges chat turns with /api/chat — it
+   never sees an API key, provider config, or the raw knowledge base.
+═══════════════════════════════════════════════════════════ */
+
+const COPY = {
+  en: {
+    tagline: ['Solving Today. ', 'Shaping Tomorrow.'],
+    sub: 'AI-POWERED TECHNOLOGY & INNOVATION',
+    header: ["I'm your ", 'Perennia AI', ' - Assistant, here to help'],
+    welcome: "Hello! I'm Perennia's AI assistant. Ask me anything about our company — our solutions, products, industries we serve, or what makes us different.",
+    placeholder: 'Ask about our solutions, products, or anything…',
+    chips: ['What does Perennia do?', 'Tell me about your products', 'Which industries do you serve?', 'What makes you different?'],
+    toggle: 'AR | عربي',
+    aiAvatar: 'P',
+    faqTitle: 'Quick Questions',
+    faq: [
+      { html: 'Tell me <strong>about</strong> the company', ask: 'Tell me about the company' },
+      { html: 'What <strong>services</strong> do you offer', ask: 'What services do you offer?' },
+      { html: 'How to <strong>Contact</strong> you', ask: 'How to contact you?' },
+    ],
+    cta: '📅 Book an appointment',
+    limitNudge: "We've covered a lot! If you'd like to go deeper, I can set up a quick call with our team.",
+    leavingNudge: "Before you go — want me to book a short call with our team to continue this?",
+    bkTitle: 'Book a call with Perennia',
+    bkSub: "Pick a time that works for you — we'll confirm by email.",
+    bkDate: 'Date', bkSlot: 'Available times', bkName: 'Name', bkEmail: 'Email',
+    bkPhone: 'Phone (optional)', bkService: 'What are you interested in? (optional)', bkNotes: 'Notes (optional)',
+    bkCancel: 'Cancel', bkSubmit: 'Confirm Booking', bkSubmitting: 'Booking…',
+    bkPickDate: 'Pick a date to see available times',
+    bkNoSlots: 'No times available that day — try another date.',
+    bkLoading: 'Loading times…',
+    bkErrName: 'Please enter your name.',
+    bkErrEmail: 'Please enter a valid email address.',
+    bkErrSlot: 'Please pick a time.',
+    bkErrGeneric: 'Could not book that slot. Please try again.',
+    bkSuccess: (label) => `You're booked for <strong>${label}</strong>. A calendar invite is on its way to your email.`,
+  },
+  ar: {
+    tagline: ['حلول اليوم. ', 'لصناعة الغد.'],
+    sub: 'تكنولوجيا وابتكار مدعومة بالذكاء الاصطناعي',
+    header: ['أنا مساعدك الذكي من ', 'بيرينيا', '، هنا لمساعدتك'],
+    welcome: 'مرحباً! أنا المساعد الذكي لبيرينيا. اسألني أي شيء عن شركتنا — حلولنا، منتجاتنا، القطاعات التي نخدمها، أو ما يميّزنا.',
+    placeholder: 'اسألني عن حلولنا أو منتجاتنا أو أي شيء آخر…',
+    chips: ['ما الذي تقدمه بيرينيا؟', 'أخبرني عن منتجاتكم', 'ما القطاعات التي تخدمونها؟', 'ما الذي يميزكم؟'],
+    toggle: 'EN | English',
+    aiAvatar: 'ب',
+    faqTitle: 'أسئلة سريعة',
+    faq: [
+      { html: 'أخبرني <strong>عن</strong> الشركة', ask: 'أخبرني عن الشركة' },
+      { html: 'ما <strong>الخدمات</strong> التي تقدمونها', ask: 'ما الخدمات التي تقدمونها؟' },
+      { html: 'كيفية <strong>التواصل</strong> معكم', ask: 'كيف يمكنني التواصل معكم؟' },
+    ],
+    cta: '📅 احجز موعداً',
+    limitNudge: 'تحدثنا عن الكثير! إذا أردت التعمق أكثر، يمكنني ترتيب مكالمة سريعة مع فريقنا.',
+    leavingNudge: 'قبل أن تذهب — هل تود أن أحجز لك مكالمة قصيرة مع فريقنا لمتابعة الحديث؟',
+    bkTitle: 'احجز مكالمة مع بيرينيا',
+    bkSub: 'اختر الوقت المناسب لك — سنؤكد الحجز عبر البريد الإلكتروني.',
+    bkDate: 'التاريخ', bkSlot: 'الأوقات المتاحة', bkName: 'الاسم', bkEmail: 'البريد الإلكتروني',
+    bkPhone: 'رقم الهاتف (اختياري)', bkService: 'ما الذي يهمك؟ (اختياري)', bkNotes: 'ملاحظات (اختياري)',
+    bkCancel: 'إلغاء', bkSubmit: 'تأكيد الحجز', bkSubmitting: 'جارِ الحجز…',
+    bkPickDate: 'اختر تاريخاً لعرض الأوقات المتاحة',
+    bkNoSlots: 'لا توجد أوقات متاحة في هذا اليوم — جرّب تاريخاً آخر.',
+    bkLoading: 'جارِ تحميل الأوقات…',
+    bkErrName: 'يرجى إدخال اسمك.',
+    bkErrEmail: 'يرجى إدخال بريد إلكتروني صحيح.',
+    bkErrSlot: 'يرجى اختيار وقت.',
+    bkErrGeneric: 'تعذّر حجز هذا الموعد. يرجى المحاولة مرة أخرى.',
+    bkSuccess: (label) => `تم حجز موعدك في <strong>${label}</strong>. ستصلك دعوة التقويم على بريدك الإلكتروني قريباً.`,
+  }
+};
+
+// ── State ─────────────────────────────────────────────────
+let lang = 'en';
+let history = [];
+let busy = false;
+let aiAvatarSrc = null;   // set by checkAvatar() if an admin avatar image exists
+let sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+let chatLocked = false;
+let appointmentBooked = false;
+let pickedSlot = null;
+
+const LEAVE_RE = /\b(bye|goodbye|thanks?,?\s*that'?s\s*all|no\s*thanks|that'?s\s*it|gtg|got\s*to\s*go|see\s*ya)\b|(مع السلامة|شكراً هذا كل شيء|هذا كل شيء|إلى اللقاء)/i;
+
+// ── Detect an admin-uploaded assistant avatar (falls back
+//    silently to the letter avatar if none exists) ─────────
+function checkAvatar() {
+  return new Promise(resolve => {
+    const candidates = ['static/images/ai_avatar.svg', 'static/images/ai_avatar.png'];
+    let i = 0;
+    const tryNext = () => {
+      if (i >= candidates.length) { aiAvatarSrc = null; resolve(); return; }
+      const src = candidates[i++] + '?t=' + Date.now();
+      const img = new Image();
+      img.onload  = () => { aiAvatarSrc = src; resolve(); };
+      img.onerror = tryNext;
+      img.src = src;
+    };
+    tryNext();
+  });
+}
+
+// ── Render helpers ────────────────────────────────────────
+function scrollBottom() {
+  const el = document.getElementById('messages');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderUI() {
+  const c = COPY[lang];
+  const isAr = lang === 'ar';
+
+  document.documentElement.lang = lang;
+  document.documentElement.dir  = isAr ? 'rtl' : 'ltr';
+
+  // ── Logo swap — served straight from the server; the admin panel
+  //    overwrites these same files on upload, so every visitor always
+  //    sees the current logo with no client-side state involved ──
+  const logoEn = document.getElementById('logo-en');
+  const logoAr = document.getElementById('logo-ar');
+
+  if (isAr) {
+    logoEn.style.display = 'none';
+    logoAr.style.display = 'block';
+    logoAr.src = 'static/images/logo_ar.png?t=' + Math.floor(Date.now() / 60000);
+  } else {
+    logoAr.style.display = 'none';
+    logoEn.style.display = 'block';
+    logoEn.src = 'static/images/logo_en.png?t=' + Math.floor(Date.now() / 60000);
+  }
+
+  const h = document.getElementById('chat-header');
+  h.innerHTML = c.header[0] + `<b>${c.header[1]}</b>` + c.header[2];
+
+  document.getElementById('input').placeholder = c.placeholder;
+  document.getElementById('lang-btn').textContent = c.toggle;
+  document.getElementById('book-btn-label').textContent = isAr ? 'احجز مكالمة' : 'Book a call';
+
+  // Chips
+  const chipsEl = document.getElementById('chips');
+  chipsEl.innerHTML = '';
+  c.chips.forEach(text => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = text;
+    btn.onclick = () => sendText(text);
+    chipsEl.appendChild(btn);
+  });
+
+  // FAQ sidebar
+  document.getElementById('faq-title').textContent = c.faqTitle;
+  const faqEl = document.getElementById('faq-list');
+  faqEl.innerHTML = '';
+  c.faq.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'faq-item';
+    btn.innerHTML = item.html;
+    btn.disabled = busy;
+    // Clicking a FAQ item asks it in the chat exactly like typing it in.
+    btn.onclick = () => sendText(item.ask);
+    faqEl.appendChild(btn);
+  });
+}
+
+function avatarInner(role) {
+  const c = COPY[lang];
+  if (role === 'ai' && aiAvatarSrc) {
+    return `<img src="${aiAvatarSrc}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  }
+  return role === 'ai' ? c.aiAvatar : '✦';
+}
+
+function addMsg(role, text, opts) {
+  const c = COPY[lang];
+  const isAr = lang === 'ar';
+  const container = document.getElementById('messages');
+
+  const row = document.createElement('div');
+  row.className = `msg ${role}`;
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.innerHTML = avatarInner(role);
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+
+  if (opts && opts.cta) {
+    const ctaRow = document.createElement('div');
+    ctaRow.className = 'cta-row';
+    const ctaBtn = document.createElement('button');
+    ctaBtn.className = 'cta-btn';
+    ctaBtn.textContent = c.cta;
+    ctaBtn.onclick = () => openBooking();
+    ctaRow.appendChild(ctaBtn);
+    bub.appendChild(ctaRow);
+  }
+
+  row.appendChild(av);
+  row.appendChild(bub);
+  container.appendChild(row);
+  scrollBottom();
+}
+
+function showTyping() {
+  const c = COPY[lang];
+  const container = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg ai';
+  row.id = 'typing';
+  if (lang === 'ar') row.style.flexDirection = 'row-reverse';
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.innerHTML = avatarInner('ai');
+
+  const bub = document.createElement('div');
+  bub.className = 'typing-bubble';
+  bub.innerHTML = '<span></span><span></span><span></span>';
+
+  row.appendChild(av);
+  row.appendChild(bub);
+  container.appendChild(row);
+  scrollBottom();
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+// ── API call — talks only to our own backend at /api/chat.
+//    The backend holds the provider, model, and API key; none of that
+//    ever reaches this browser. ──────────────────────────────────────
+async function callAI(userMessage) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lang, message: userMessage, history, sessionId })
+  });
+  if (!res.ok) throw new Error(`chat ${res.status}`);
+  return res.json();
+}
+
+// ── Send ──────────────────────────────────────────────────
+function setFaqDisabled(disabled) {
+  document.querySelectorAll('.faq-item').forEach(btn => btn.disabled = disabled);
+}
+
+function lockChat() {
+  chatLocked = true;
+  const inp = document.getElementById('input');
+  inp.disabled = true;
+  document.getElementById('send-btn').disabled = true;
+  setFaqDisabled(true);
+  document.getElementById('chips').innerHTML = '';
+}
+
+async function sendText(text) {
+  if (busy || chatLocked || !text.trim()) return;
+  busy = true;
+
+  const leavingIntent = LEAVE_RE.test(text) && !appointmentBooked && history.length >= 2;
+
+  document.getElementById('chips').innerHTML = '';
+  document.getElementById('send-btn').disabled = true;
+  setFaqDisabled(true);
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+
+  showTyping();
+  try {
+    const data = await callAI(text);
+    hideTyping();
+    const nearLimit = !data.limitReached && data.maxTurns && (data.maxTurns - data.turnsUsed) <= 3;
+    addMsg('ai', data.reply, { cta: data.limitReached || nearLimit });
+    history.push({ role: 'assistant', content: data.reply });
+
+    if (data.limitReached) {
+      lockChat();
+    } else if (leavingIntent && !nearLimit) {
+      setTimeout(() => addMsg('ai', COPY[lang].leavingNudge, { cta: true }), 450);
+    }
+  } catch(err) {
+    hideTyping();
+    addMsg('ai', lang === 'ar' ? 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Sorry, something went wrong. Please try again.');
+    console.error(err);
+  }
+
+  busy = false;
+  if (!chatLocked) {
+    setFaqDisabled(false);
+    const inp = document.getElementById('input');
+    document.getElementById('send-btn').disabled = !inp.value.trim();
+    inp.focus();
+  }
+}
+
+function send() {
+  const inp = document.getElementById('input');
+  const text = inp.value.trim();
+  inp.value = '';
+  inp.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  sendText(text);
+}
+
+// ── Language toggle ───────────────────────────────────────
+function toggleLang() {
+  lang = lang === 'en' ? 'ar' : 'en';
+  history = [];
+  chatLocked = false;
+  const inp = document.getElementById('input');
+  inp.disabled = false;
+  document.getElementById('messages').innerHTML = '';
+  renderUI();
+  addMsg('ai', COPY[lang].welcome);
+}
+
+// ── Theme toggle (light default; dark still available) ────
+function initThemeButton() {
+  const btn = document.getElementById('theme-btn');
+  if (!btn) return;
+  const isLight = document.body.classList.contains('theme-light');
+  btn.textContent = isLight ? '☀' : '🌙';
+}
+function toggleTheme() {
+  const next = document.body.classList.contains('theme-light') ? 'dark' : 'light';
+  document.body.classList.toggle('theme-light', next === 'light');
+  try { localStorage.setItem('perennia_theme', next); } catch(e) {}
+  initThemeButton();
+}
+
+// ── Booking modal ─────────────────────────────────────────
+function bkText() {
+  const c = COPY[lang];
+  document.getElementById('bk-title').textContent = c.bkTitle;
+  document.getElementById('bk-sub').textContent = c.bkSub;
+  document.getElementById('bk-lbl-date').textContent = c.bkDate;
+  document.getElementById('bk-lbl-slot').textContent = c.bkSlot;
+  document.getElementById('bk-lbl-name').textContent = c.bkName;
+  document.getElementById('bk-lbl-email').textContent = c.bkEmail;
+  document.getElementById('bk-lbl-phone').textContent = c.bkPhone;
+  document.getElementById('bk-lbl-service').textContent = c.bkService;
+  document.getElementById('bk-lbl-notes').textContent = c.bkNotes;
+  document.getElementById('bk-cancel-btn').textContent = c.bkCancel;
+  document.getElementById('bk-submit-btn').textContent = c.bkSubmit;
+  document.getElementById('bk-slots-msg').textContent = c.bkPickDate;
+}
+
+function openBooking() {
+  bkText();
+  document.getElementById('bk-form-wrap').style.display = 'block';
+  document.getElementById('bk-success').style.display = 'none';
+  document.getElementById('bk-err').textContent = '';
+  pickedSlot = null;
+  const today = new Date();
+  const dateInp = document.getElementById('bk-date');
+  dateInp.min = today.toISOString().slice(0, 10);
+  document.getElementById('booking-overlay').classList.add('open');
+}
+
+function closeBooking() {
+  document.getElementById('booking-overlay').classList.remove('open');
+}
+
+async function loadSlots() {
+  const c = COPY[lang];
+  const date = document.getElementById('bk-date').value;
+  const slotsEl = document.getElementById('bk-slots');
+  pickedSlot = null;
+  if (!date) { slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkPickDate}</div>`; return; }
+  slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkLoading}</div>`;
+  try {
+    const res = await fetch(`/api/appointments/availability?date=${encodeURIComponent(date)}`);
+    const data = await res.json();
+    const slots = data.slots || [];
+    if (!slots.length) { slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkNoSlots}</div>`; return; }
+    slotsEl.innerHTML = '';
+    slots.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'bk-slot';
+      btn.textContent = s.label;
+      btn.onclick = () => {
+        pickedSlot = s;
+        slotsEl.querySelectorAll('.bk-slot').forEach(b => b.classList.remove('picked'));
+        btn.classList.add('picked');
+      };
+      slotsEl.appendChild(btn);
+    });
+  } catch {
+    slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkNoSlots}</div>`;
+  }
+}
+
+async function submitBooking() {
+  const c = COPY[lang];
+  const errEl = document.getElementById('bk-err');
+  const name = document.getElementById('bk-name').value.trim();
+  const email = document.getElementById('bk-email').value.trim();
+
+  if (!name) { errEl.textContent = c.bkErrName; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = c.bkErrEmail; return; }
+  if (!pickedSlot) { errEl.textContent = c.bkErrSlot; return; }
+  errEl.textContent = '';
+
+  const submitBtn = document.getElementById('bk-submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = c.bkSubmitting;
+
+  try {
+    const res = await fetch('/api/appointments/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, email,
+        phone: document.getElementById('bk-phone').value.trim(),
+        service: document.getElementById('bk-service').value.trim(),
+        notes: document.getElementById('bk-notes').value.trim(),
+        start: pickedSlot.start,
+        end: pickedSlot.end,
+        lang,
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || c.bkErrGeneric);
+
+    appointmentBooked = true;
+    document.getElementById('bk-form-wrap').style.display = 'none';
+    document.getElementById('bk-success').style.display = 'block';
+    const dt = new Date(pickedSlot.start);
+    const label = dt.toLocaleDateString(lang === 'ar' ? 'ar' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' · ' + pickedSlot.label;
+    document.getElementById('bk-success-msg').innerHTML = c.bkSuccess(label);
+  } catch (e) {
+    errEl.textContent = e.message || c.bkErrGeneric;
+  }
+  submitBtn.disabled = false;
+  submitBtn.textContent = c.bkSubmit;
+}
+
+// ── Input auto-resize ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  initThemeButton();
+  await checkAvatar();
+  renderUI();
+  addMsg('ai', COPY[lang].welcome);
+
+  const inp = document.getElementById('input');
+  inp.addEventListener('input', () => {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 110) + 'px';
+    document.getElementById('send-btn').disabled = !inp.value.trim() || busy;
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+});
+</script>
+</body>
+</html>
