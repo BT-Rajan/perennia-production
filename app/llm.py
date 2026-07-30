@@ -61,7 +61,10 @@ async def chat_completion(
                 )
                 if resp.status_code >= 400:
                     raise LLMError(f"Anthropic API error ({resp.status_code}).", 502)
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except ValueError:
+                    raise LLMError("Anthropic API returned an invalid (non-JSON) response.", 502)
                 return "".join(b.get("text", "") for b in data.get("content", []))
 
             # DeepSeek / OpenAI / any OpenAI-compatible custom endpoint
@@ -80,8 +83,14 @@ async def chat_completion(
             )
             if resp.status_code >= 400:
                 raise LLMError(f"{provider} API error ({resp.status_code}).", 502)
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            try:
+                data = resp.json()
+            except ValueError:
+                raise LLMError(f"{provider} API returned an invalid (non-JSON) response.", 502)
+            try:
+                return data["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError):
+                raise LLMError(f"{provider} API returned an unexpected response shape.", 502)
 
         except httpx.RequestError as e:
             raise LLMError(f"Could not reach the {provider} API: {e}", 502)

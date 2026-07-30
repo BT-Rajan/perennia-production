@@ -232,39 +232,46 @@ class BookAppointmentRequest(BaseModel):
 @app.post("/api/appointments/book")
 @limiter.limit(settings.RATE_LIMIT_APPOINTMENT)
 async def book_appointment(request: Request, body: BookAppointmentRequest):
-    if not scheduling.slot_is_available(body.start, body.end):
-        raise HTTPException(409, "That slot is no longer available. Please pick another.")
+    # The availability check and the eventual write must be treated as one
+    # unit — otherwise two requests can both pass the check for the same
+    # slot before either has written its appointment, and double-book it.
+    # A single process-wide lock is sufficient here since storage is local
+    # JSON, not a shared DB (see the single-instance limitation noted in
+    # the README).
+    with storage.BOOKING_LOCK:
+        if not scheduling.slot_is_available(body.start, body.end):
+            raise HTTPException(409, "That slot is no longer available. Please pick another.")
 
-    start_dt = datetime.datetime.fromisoformat(body.start)
-    end_dt = datetime.datetime.fromisoformat(body.end)
+        start_dt = datetime.datetime.fromisoformat(body.start)
+        end_dt = datetime.datetime.fromisoformat(body.end)
 
-    contact = (storage.load_config().get("contact") or {})
-    summary = f"Perennia consultation — {body.name}"[:200]
-    description = (
-        f"Name: {body.name}\nEmail: {body.email}\nPhone: {body.phone or '—'}\n"
-        f"Service interest: {body.service or '—'}\nNotes: {body.notes or '—'}"
-    )
+        contact = (storage.load_config().get("contact") or {})
+        summary = f"Perennia consultation — {body.name}"[:200]
+        description = (
+            f"Name: {body.name}\nEmail: {body.email}\nPhone: {body.phone or '—'}\n"
+            f"Service interest: {body.service or '—'}\nNotes: {body.notes or '—'}"
+        )
 
-    event_id = gcal.create_event(
-        summary=summary, description=description, start=start_dt, end=end_dt, attendee_email=body.email,
-    )
+        event_id = gcal.create_event(
+            summary=summary, description=description, start=start_dt, end=end_dt, attendee_email=body.email,
+        )
 
-    entry = {
-        "id": uuid.uuid4().hex[:12],
-        "name": body.name,
-        "email": body.email,
-        "phone": body.phone,
-        "service": body.service,
-        "notes": body.notes,
-        "start": body.start,
-        "end": body.end,
-        "lang": "ar" if body.lang == "ar" else "en",
-        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "calendar_event_id": event_id,
-        "status": "confirmed",
-    }
-    storage.add_appointment(entry)
-    storage.record_appointment_stat(start_dt.date().isoformat())
+        entry = {
+            "id": uuid.uuid4().hex[:12],
+            "name": body.name,
+            "email": body.email,
+            "phone": body.phone,
+            "service": body.service,
+            "notes": body.notes,
+            "start": body.start,
+            "end": body.end,
+            "lang": "ar" if body.lang == "ar" else "en",
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "calendar_event_id": event_id,
+            "status": "confirmed",
+        }
+        storage.add_appointment(entry)
+        storage.record_appointment_stat(start_dt.date().isoformat())
 
     return {
         "ok": True,

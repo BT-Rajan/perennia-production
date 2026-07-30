@@ -10,6 +10,7 @@ admin configures those two env vars.
 """
 import datetime
 import logging
+import threading
 from typing import Optional
 
 from app.config import settings
@@ -18,32 +19,43 @@ log = logging.getLogger("perennia.gcal")
 
 _service = None
 _service_load_attempted = False
+_service_lock = threading.Lock()
 
 
 def _get_service():
     global _service, _service_load_attempted
+    # Fast path: no lock needed once initialization has already happened
+    # (successfully or not) — this keeps the common case cheap.
     if _service is not None:
         return _service
     if _service_load_attempted:
         return None
-    _service_load_attempted = True
 
-    if not settings.GOOGLE_SERVICE_ACCOUNT_FILE or not settings.GOOGLE_CALENDAR_ID:
-        return None
+    with _service_lock:
+        # Re-check inside the lock: another thread may have already run
+        # initialization while we were waiting for it.
+        if _service is not None:
+            return _service
+        if _service_load_attempted:
+            return None
+        _service_load_attempted = True
 
-    try:
-        from google.oauth2 import service_account
-        from googleapiclient.discovery import build
+        if not settings.GOOGLE_SERVICE_ACCOUNT_FILE or not settings.GOOGLE_CALENDAR_ID:
+            return None
 
-        creds = service_account.Credentials.from_service_account_file(
-            settings.GOOGLE_SERVICE_ACCOUNT_FILE,
-            scopes=["https://www.googleapis.com/auth/calendar"],
-        )
-        _service = build("calendar", "v3", credentials=creds, cache_discovery=False)
-        return _service
-    except Exception as e:
-        log.warning("Google Calendar not available: %s", e)
-        return None
+        try:
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+
+            creds = service_account.Credentials.from_service_account_file(
+                settings.GOOGLE_SERVICE_ACCOUNT_FILE,
+                scopes=["https://www.googleapis.com/auth/calendar"],
+            )
+            _service = build("calendar", "v3", credentials=creds, cache_discovery=False)
+            return _service
+        except Exception as e:
+            log.warning("Google Calendar not available: %s", e)
+            return None
 
 
 def is_configured() -> bool:

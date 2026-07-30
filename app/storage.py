@@ -18,6 +18,12 @@ from app.security import decrypt_secret, encrypt_secret
 
 _lock = threading.Lock()
 
+# Serializes the full "check availability, then write" sequence for
+# appointment booking. Guarding writes alone isn't enough here, since the
+# race is between the availability check and the later insert, not inside
+# add_appointment() itself.
+BOOKING_LOCK = threading.Lock()
+
 CONFIG_PATH = settings.DATA_DIR / "config.json"
 KB_PATH = settings.DATA_DIR / "knowledge_base.json"
 APPT_PATH = settings.DATA_DIR / "appointments.json"
