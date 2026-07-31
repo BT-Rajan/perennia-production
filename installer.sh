@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 ###############################################################################
 # Perennia Installer
@@ -10,6 +9,9 @@ set -Eeuo pipefail
 APP_NAME="web"
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="${APP_DIR}/venv"
+
+APP_HOST="127.0.0.1"
+APP_PORT="8000"
 
 DB_HOST="127.0.0.1"
 DB_PORT="3306"
@@ -48,7 +50,7 @@ clear
 
 echo
 echo "============================================================"
-echo "        PERENNIA INSTALLER"
+echo "                PERENNIA INSTALLER"
 echo "============================================================"
 echo
 echo "Application : ${APP_NAME}"
@@ -62,14 +64,15 @@ step "1/9 Checking Requirements"
 command -v python3 >/dev/null || fail "python3 not installed"
 command -v pip3 >/dev/null || fail "pip3 not installed"
 command -v pm2 >/dev/null || fail "PM2 not installed"
+command -v openssl >/dev/null || fail "openssl not installed"
 
 ok "Requirements verified"
 
 ###############################################################################
 step "2/9 Creating Virtual Environment"
 
-if [ ! -d "$VENV_DIR" ]; then
-    python3 -m venv "$VENV_DIR"
+if [ ! -d "${VENV_DIR}" ]; then
+    python3 -m venv "${VENV_DIR}"
 fi
 
 source "${VENV_DIR}/bin/activate"
@@ -90,28 +93,47 @@ fi
 ok "Dependencies installed"
 
 ###############################################################################
-step "4/9 Creating .env"
+step "4/9 Generating Configuration"
 
-if [ ! -f .env ]; then
-
-    if [ -f .env.example ]; then
-        cp .env.example .env
-    else
-        touch .env
-    fi
-
-fi
+SECRET_KEY=$(openssl rand -hex 32)
+JWT_SECRET_KEY=$(openssl rand -hex 32)
+ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 cat > .env <<EOF
+#########################################
+# Application
+#########################################
+
+APP_HOST=${APP_HOST}
+APP_PORT=${APP_PORT}
+
+#########################################
+# Security
+#########################################
+
+SECRET_KEY=${SECRET_KEY}
+JWT_SECRET_KEY=${JWT_SECRET_KEY}
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+
+#########################################
+# Database
+#########################################
+
 DB_HOST=${DB_HOST}
 DB_PORT=${DB_PORT}
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
-APP_HOST=${SERVER_IP}
+
+#########################################
+# Environment
+#########################################
+
+ENVIRONMENT=production
+DEBUG=false
 EOF
 
-ok ".env configured"
+ok ".env generated"
 
 ###############################################################################
 step "5/9 Creating Directories"
@@ -133,52 +155,61 @@ chmod +x *.sh 2>/dev/null || true
 ok "Permissions updated"
 
 ###############################################################################
-step "7/9 Starting PM2"
+step "7/9 Starting Application"
 
-pm2 delete web >/dev/null 2>&1 || true
+pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
 
 pm2 start \
 "${VENV_DIR}/bin/python" \
---name web \
+--name "${APP_NAME}" \
 -- \
 -m uvicorn app.main:app \
---host 127.0.0.1 \
---port 8000
+--host "${APP_HOST}" \
+--port "${APP_PORT}"
 
 pm2 save
 
 ok "Application started"
 
 ###############################################################################
-step "8/9 Enabling Startup"
+step "8/9 Configuring Startup"
 
 pm2 startup systemd -u "$(whoami)" --hp "$HOME" >/dev/null 2>&1 || true
 pm2 save
 
-ok "PM2 startup configured"
+ok "Startup configured"
 
 ###############################################################################
-step "9/9 Status"
+step "9/9 Installation Status"
 
 pm2 status
 
 echo
 echo "============================================================"
-echo "INSTALLATION COMPLETED"
+echo "             INSTALLATION COMPLETED"
 echo "============================================================"
 echo
-echo "Application : web"
+echo "Application : ${APP_NAME}"
+echo "Directory   : ${APP_DIR}"
 echo "Database    : ${DB_NAME}"
-echo "User        : ${DB_USER}"
+echo "DB User     : ${DB_USER}"
 echo "Server IP   : ${SERVER_IP}"
+echo "Host        : ${APP_HOST}"
+echo "Port        : ${APP_PORT}"
 echo
-echo "Commands"
-echo "--------"
+echo "Secret Keys"
+echo "-----------"
+echo "SECRET_KEY        : Generated"
+echo "JWT_SECRET_KEY    : Generated"
+echo "ENCRYPTION_KEY    : Generated"
+echo
+echo "Useful Commands"
+echo "---------------"
 echo "pm2 status"
-echo "pm2 logs web"
-echo "pm2 restart web"
-echo "pm2 stop web"
+echo "pm2 logs ${APP_NAME}"
+echo "pm2 restart ${APP_NAME}"
+echo "pm2 stop ${APP_NAME}"
 echo
-echo "Application is listening on 127.0.0.1:8000"
-echo "Configure CloudPanel/Nginx to proxy to this port."
+echo "Application is pinned to ${APP_HOST}:${APP_PORT}"
+echo "Configure CloudPanel/Nginx to proxy to port ${APP_PORT}."
 echo
