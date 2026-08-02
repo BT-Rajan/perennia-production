@@ -4,3 +4,4 @@ python-multipart
 slowapi
 email-validator
 filetype
+pytest-asyncio

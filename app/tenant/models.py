@@ -161,3 +161,40 @@ class Appointment(TenantBase):
     customer = relationship("Customer")
     staff = relationship("Staff")
     service = relationship("Service")
+
+
+# ── Pass 2: chat / knowledge base (docs/06-development-passes.md) ───────
+
+class KnowledgeBase(TenantBase):
+    __tablename__ = "knowledge_base"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    content_hash = Column(String(64), nullable=True)
+    status = Column(String(16), nullable=False, default="active")  # 'active' | 'deleted'
+    uploaded_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Conversation(TenantBase):
+    __tablename__ = "conversation"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customer.id"), nullable=True)  # anonymous until identified
+    channel = Column(String(16), nullable=False, default="web")
+    language = Column(String(8), nullable=False, default="en")
+    started_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Message(TenantBase):
+    __tablename__ = "message"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    conversation_id = Column(Integer, ForeignKey("conversation.id"), nullable=False)
+    role = Column(String(16), nullable=False)  # 'user' | 'assistant'
+    content = Column(Text, nullable=False)
+    # True when the assistant could not ground an answer in the KB and a
+    # handoff/fallback was triggered — this IS the "unanswered questions"
+    # list surfaced on the Knowledge Base screen (docs/11).
+    was_fallback = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
