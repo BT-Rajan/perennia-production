@@ -46,18 +46,6 @@ def _cleanup_tenant(subdomain: str, db_name: str, db_user: str):
         conn.close()
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _setup_control_db():
-    conn = _admin_conn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP DATABASE IF EXISTS `{settings.CONTROL_DB_NAME}`")
-            cur.execute(f"CREATE DATABASE `{settings.CONTROL_DB_NAME}`")
-    finally:
-        conn.close()
-    init_control_db()
-    yield
-
 
 def _provision(subdomain: str, plan=PlanTier.growth) -> Tenant:
     with get_control_session() as cs:

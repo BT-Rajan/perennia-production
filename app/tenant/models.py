@@ -2,14 +2,18 @@
 Tenant database models (docs/02-database-schema.md).
 
 Provisioned once per tenant, into that tenant's own isolated MySQL database.
-Pass 1 scope only: app_config, audit_log, and a minimal admin_user table so
-a tenant owner has somewhere to log in. Booking/staff/customer tables are
-Pass 2 scope (docs/06-development-passes.md) — deliberately not built here.
+Pass 1 tables: app_config, audit_log, admin_user.
+Pass 2 tables (added below): staff, service, staff_service, customer,
+appointment — the booking engine's data model (docs/06 Pass 2).
 """
+import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import (
+    Column, Integer, String, DateTime, Text, JSON, Boolean, Enum, ForeignKey,
+    Numeric, Table, UniqueConstraint,
+)
+from sqlalchemy.orm import declarative_base, relationship
 
 TenantBase = declarative_base()
 
@@ -29,6 +33,12 @@ class AppConfig(TenantBase):
     business_category = Column(String(64), nullable=True)  # drives discretion-mode default later
     timezone = Column(String(64), nullable=False, default="Asia/Kuwait")
     logo_ref = Column(String(255), nullable=True)
+    # Pass 2: business hours the booking engine reads (per-tenant, not a
+    # global settings default like the old single-tenant scheduling.py).
+    business_start_hour = Column(Integer, nullable=False, default=9)
+    business_end_hour = Column(Integer, nullable=False, default=17)
+    workdays = Column(String(32), nullable=False, default="0,1,2,3,4")  # Mon=0 .. Sun=6
+    slot_minutes = Column(Integer, nullable=False, default=30)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
@@ -61,3 +71,93 @@ class AdminUser(TenantBase):
     username = Column(String(255), nullable=False, unique=True)
     password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+# ── Pass 2: booking engine (docs/06-development-passes.md) ──────────────
+
+staff_service_table = Table(
+    "staff_service", TenantBase.metadata,
+    Column("staff_id", Integer, ForeignKey("staff.id"), primary_key=True),
+    Column("service_id", Integer, ForeignKey("service.id"), primary_key=True),
+)
+
+
+class Staff(TenantBase):
+    __tablename__ = "staff"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    gender = Column(String(16), nullable=True)  # first-class field, not an afterthought (docs/11)
+    active = Column(Boolean, nullable=False, default=True)
+    # Hard gate (docs/11 tenant-admin-ui-spec.md, Staff & Services): a staff
+    # member without a connected calendar is never bookable. This flag is
+    # the enforcement point, checked in booking.py — not just a UI warning.
+    calendar_connected = Column(Boolean, nullable=False, default=False)
+    calendar_provider = Column(String(32), nullable=True)  # 'google' | 'outlook'
+    calendar_ref_encrypted = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    services = relationship("Service", secondary=staff_service_table, back_populates="staff_members")
+
+
+class Service(TenantBase):
+    __tablename__ = "service"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    duration_minutes = Column(Integer, nullable=False)
+    price = Column(Numeric(10, 3), nullable=False)  # KD to 3 decimal places
+    category = Column(String(128), nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+
+    staff_members = relationship("Staff", secondary=staff_service_table, back_populates="services")
+
+
+class Customer(TenantBase):
+    __tablename__ = "customer"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=True)
+    phone = Column(String(32), nullable=False, unique=True)
+    language_pref = Column(String(8), nullable=False, default="en")
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class AppointmentStatus(str, enum.Enum):
+    pending_deposit = "pending_deposit"
+    confirmed = "confirmed"
+    cancelled = "cancelled"
+    completed = "completed"
+    no_show = "no_show"
+
+
+class DepositStatus(str, enum.Enum):
+    not_required = "not_required"
+    pending = "pending"
+    paid = "paid"
+    refunded = "refunded"
+
+
+class CreatedVia(str, enum.Enum):
+    chat = "chat"
+    admin = "admin"
+
+
+class Appointment(TenantBase):
+    __tablename__ = "appointment"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customer.id"), nullable=False)
+    staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False)
+    service_id = Column(Integer, ForeignKey("service.id"), nullable=False)
+    start_time = Column(DateTime(timezone=True), nullable=False)
+    end_time = Column(DateTime(timezone=True), nullable=False)
+    status = Column(Enum(AppointmentStatus), nullable=False, default=AppointmentStatus.pending_deposit)
+    deposit_status = Column(Enum(DepositStatus), nullable=False, default=DepositStatus.not_required)
+    deposit_amount = Column(Numeric(10, 3), nullable=True)
+    created_via = Column(Enum(CreatedVia), nullable=False, default=CreatedVia.admin)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    customer = relationship("Customer")
+    staff = relationship("Staff")
+    service = relationship("Service")
