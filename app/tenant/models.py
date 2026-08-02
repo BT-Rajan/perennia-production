@@ -39,6 +39,13 @@ class AppConfig(TenantBase):
     business_end_hour = Column(Integer, nullable=False, default=17)
     workdays = Column(String(32), nullable=False, default="0,1,2,3,4")  # Mon=0 .. Sun=6
     slot_minutes = Column(Integer, nullable=False, default=30)
+    # LLM provider config, mirroring the existing single-tenant app's
+    # config.py pattern — encrypted at rest via the same Fernet scheme used
+    # for tenant DB credentials (app/security.py).
+    llm_provider = Column(String(32), nullable=False, default="anthropic")
+    llm_model = Column(String(128), nullable=True)
+    llm_base_url = Column(String(255), nullable=True)
+    llm_api_key_encrypted = Column(Text, nullable=True)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
 

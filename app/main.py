@@ -39,6 +39,7 @@ from app.security import (
 # continue to serve the existing app/data/*.json-backed installation until
 # Pass 2 migrates real booking/admin functionality onto the tenant DB model.
 from app.core.auth_routes import router as tenant_auth_router
+from app.core.customer_routes import router as customer_reception_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("perennia")
@@ -51,6 +52,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Pass 1 multi-tenant foundation — additive, doesn't touch routes below.
 app.include_router(tenant_auth_router)
+app.include_router(customer_reception_router)
 
 if settings.ALLOWED_ORIGINS:
     app.add_middleware(
@@ -113,6 +115,19 @@ def serve_index():
 @app.get("/admin")
 def serve_admin():
     return FileResponse(settings.PUBLIC_DIR / "admin.html")
+
+
+@app.get("/reception")
+def serve_reception():
+    """
+    Multi-tenant customer reception page (docs/12-customer-reception-ui-spec.md).
+    Dev/Pass-2 note: tenant is selected via ?tenant=<subdomain> query param,
+    read client-side and sent as X-Tenant-Subdomain on every API call. In
+    production this becomes Host-header subdomain resolution instead — see
+    app/core/tenant_context.py's resolver-swap note. The page itself doesn't
+    need to change when that happens, only how it determines the subdomain.
+    """
+    return FileResponse(settings.PUBLIC_DIR / "reception.html")
 
 
 # ═══════════════════════════════════════════════════════════════════
