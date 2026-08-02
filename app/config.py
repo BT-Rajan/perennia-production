@@ -88,6 +88,29 @@ class Settings:
     GOOGLE_SERVICE_ACCOUNT_FILE: str = _get("GOOGLE_SERVICE_ACCOUNT_FILE", "")
     GOOGLE_CALENDAR_ID: str = _get("GOOGLE_CALENDAR_ID", "")
 
+    # ── Multi-tenant foundation (Pass 1, docs/06-development-passes.md) ──
+    # Control DB: one database, holds the tenant registry, feature flags,
+    # and migration log. Never holds tenant application data.
+    MYSQL_HOST: str = _get("MYSQL_HOST", "127.0.0.1")
+    MYSQL_PORT: int = int(_get("MYSQL_PORT", "3306"))
+    MYSQL_ADMIN_USER: str = _get("MYSQL_ADMIN_USER", "root")
+    # Used only for control-DB access and tenant DB *provisioning*
+    # (CREATE DATABASE / CREATE USER). Runtime tenant connections use the
+    # per-tenant credentials stored (encrypted) in the tenant registry, not
+    # this one — see app/control/provisioning.py.
+    MYSQL_ADMIN_PASSWORD: str = _get("MYSQL_ADMIN_PASSWORD", required=True)
+    CONTROL_DB_NAME: str = _get("CONTROL_DB_NAME", "perennia_control")
+
+    # Bounded pool-of-pools cap (docs/01-architecture.md, "Connection
+    # management at scale") — how many tenant connection pools stay warm
+    # at once before the oldest idle one is evicted.
+    TENANT_POOL_MAX_WARM: int = int(_get("TENANT_POOL_MAX_WARM", "50"))
+    TENANT_POOL_IDLE_EVICT_SECONDS: int = int(_get("TENANT_POOL_IDLE_EVICT_SECONDS", "300"))
+
+    # Simple alerting (docs/06 Pass 1: notification, not a dashboard).
+    ALERT_WEBHOOK_URL: str = _get("ALERT_WEBHOOK_URL", "")
+    ALERT_PAYMENT_FAILURE_THRESHOLD: int = int(_get("ALERT_PAYMENT_FAILURE_THRESHOLD", "3"))
+
 
 settings = Settings()
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)

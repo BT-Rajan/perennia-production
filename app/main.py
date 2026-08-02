@@ -33,6 +33,13 @@ from app.security import (
     new_csrf_token, csrf_tokens_match, mask_key,
 )
 
+# ── Multi-tenant foundation (docs/06-development-passes.md, Pass 1) ──────
+# Additive only: mounted under /api/tenant, does not touch any existing
+# route below. The single-tenant routes in this file are untouched and
+# continue to serve the existing app/data/*.json-backed installation until
+# Pass 2 migrates real booking/admin functionality onto the tenant DB model.
+from app.core.auth_routes import router as tenant_auth_router
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("perennia")
 
@@ -41,6 +48,9 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Perennia API", docs_url=None, redoc_url=None)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Pass 1 multi-tenant foundation — additive, doesn't touch routes below.
+app.include_router(tenant_auth_router)
 
 if settings.ALLOWED_ORIGINS:
     app.add_middleware(

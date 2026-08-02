@@ -75,3 +75,21 @@ def mask_key(plaintext_key: str) -> str:
         return "•" * len(plaintext_key)
     return plaintext_key[:4] + "…" + plaintext_key[-4:]
 
+
+# ── Multi-tenant admin sessions (docs/06 Pass 1) ─────────────────────────
+# Same signed/expiring token mechanism as the single-tenant session above,
+# extended to carry which tenant this session belongs to. A session token
+# minted for one tenant's subdomain is meaningless for another — the
+# subdomain is inside the signed payload, not supplied separately by the
+# client on later requests, so it can't be swapped.
+
+def create_tenant_session_token(subdomain: str, username: str, csrf_token: str) -> str:
+    return _serializer.dumps({"sub": subdomain, "u": username, "csrf": csrf_token})
+
+
+def verify_tenant_session_token(token: str) -> dict | None:
+    try:
+        return _serializer.loads(token, max_age=settings.SESSION_TTL_SECONDS)
+    except (BadSignature, SignatureExpired):
+        return None
+

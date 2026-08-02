@@ -1,0 +1,6 @@
+sqlalchemy
+pymysql
+python-multipart
+slowapi
+email-validator
+filetype
