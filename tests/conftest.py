@@ -37,3 +37,12 @@ def _setup_control_db_once():
         conn.close()
     init_control_db()
     yield
+
+
+# Note: RATE_LIMIT_LOGIN must be raised in the local .env for test runs
+# (e.g. RATE_LIMIT_LOGIN=1000/minute). TestClient requests all share the
+# same fake client IP, so slowapi's in-memory limiter accumulates across
+# the whole suite, not just within one test. Weakening the real code-level
+# default to make tests pass would be the wrong fix; overriding it via the
+# environment for local test runs, while leaving the shipped default
+# strict, is the correct one.

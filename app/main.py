@@ -40,6 +40,7 @@ from app.security import (
 # Pass 2 migrates real booking/admin functionality onto the tenant DB model.
 from app.core.auth_routes import router as tenant_auth_router
 from app.core.customer_routes import router as customer_reception_router
+from app.core.admin_routes import router as tenant_admin_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("perennia")
@@ -53,6 +54,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Pass 1 multi-tenant foundation — additive, doesn't touch routes below.
 app.include_router(tenant_auth_router)
 app.include_router(customer_reception_router)
+app.include_router(tenant_admin_router)
 
 if settings.ALLOWED_ORIGINS:
     app.add_middleware(
@@ -128,6 +130,17 @@ def serve_reception():
     need to change when that happens, only how it determines the subdomain.
     """
     return FileResponse(settings.PUBLIC_DIR / "reception.html")
+
+
+@app.get("/tenant-admin")
+def serve_tenant_admin():
+    """
+    Tenant admin panel (docs/11-tenant-admin-ui-spec.md), Pass 2 scope:
+    Dashboard, Bookings, Staff & Services, Knowledge Base only — the other
+    five designed screens are deferred (docs/06 Pass 6). Same ?tenant= dev
+    convention as /reception for the initial login call.
+    """
+    return FileResponse(settings.PUBLIC_DIR / "tenant-admin.html")
 
 
 # ═══════════════════════════════════════════════════════════════════

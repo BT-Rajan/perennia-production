@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tenant Admin</title>
+<style>
+  :root { --accent: #b5763f; --bg: #faf7f4; --card: #ffffff; --border: #e6ddd3; --text: #2a2420; --muted: #8a7f74; --warn: #b5762f; --danger: #b53f3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  #login-screen { max-width: 320px; margin: 80px auto; padding: 24px; background: var(--card); border-radius: 12px; border: 1px solid var(--border); }
+  #login-screen input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; }
+  #login-screen button, .primary { width: 100%; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; }
+  #app { display: none; max-width: 760px; margin: 0 auto; padding: 16px; }
+  nav { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  nav button { padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .metric { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .metric .label { font-size: 12px; color: var(--muted); }
+  .metric .value { font-size: 22px; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; background: #f5f0ea; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #f1e4d6; }
+  .tag.warn { background: #fbeee0; color: var(--warn); }
+  .tag.danger { background: #fbe3e3; color: var(--danger); }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .panel h3 { margin-top: 0; font-size: 14px; }
+  .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .form-row input, .form-row textarea { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+  .form-row button { padding: 8px 14px; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; }
+  .error { color: var(--danger); font-size: 13px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <h3>Sign in</h3>
+  <input id="login-username" placeholder="Username">
+  <input id="login-password" type="password" placeholder="Password">
+  <div class="error" id="login-error"></div>
+  <button onclick="doLogin()">Sign in</button>
+</div>
+
+<div id="app">
+  <nav>
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="bookings">Bookings</button>
+    <button data-tab="staff">Staff &amp; Services</button>
+    <button data-tab="knowledge">Knowledge Base</button>
+  </nav>
+  <div id="tab-content"></div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const TENANT = params.get('tenant') || 'glowspa';
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const resp = await fetch('/api/tenant/login', {
+    method: 'POST',
+    headers: { 'X-Tenant-Subdomain': TENANT, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!resp.ok) {
+    document.getElementById('login-error').textContent = 'Incorrect username or password.';
+    return;
+  }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderTab('dashboard');
+}
+
+async function api(path, opts = {}) {
+  const resp = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  if (resp.status === 401) {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'block';
+    document.getElementById('login-error').textContent = 'Session expired — please sign in again.';
+    throw new Error('unauthenticated');
+  }
+  return resp;
+}
+
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTab(btn.dataset.tab);
+  });
+});
+
+async function renderTab(tab) {
+  const el = document.getElementById('tab-content');
+  el.innerHTML = '<p>Loading…</p>';
+  if (tab === 'dashboard') return renderDashboard(el);
+  if (tab === 'bookings') return renderBookings(el);
+  if (tab === 'staff') return renderStaff(el);
+  if (tab === 'knowledge') return renderKnowledge(el);
+}
+
+async function renderDashboard(el) {
+  const resp = await api('/api/tenant/admin/dashboard');
+  const d = await resp.json();
+  el.innerHTML = `
+    <div class="cards">
+      <div class="metric"><div class="label">Today's bookings</div><div class="value">${d.todays_bookings}</div></div>
+      <div class="metric"><div class="label">Deposits pending</div><div class="value">${d.deposits_pending}</div></div>
+      <div class="metric"><div class="label">Unanswered chat questions</div><div class="value">${d.unanswered_chat_questions}</div></div>
+      <div class="metric"><div class="label">No-shows (7d)</div><div class="value">${d.no_shows_7d}</div></div>
+    </div>
+    <div class="panel">
+      <h3>Today's schedule</h3>
+      <table>
+        <thead><tr><th>Time</th><th>Customer</th><th>Service</th><th>Staff</th></tr></thead>
+        <tbody>
+          ${d.schedule.map(s => `<tr><td>${s.time}</td><td>${s.customer}${s.deposit_pending ? ' <span class="tag warn">deposit pending</span>' : ''}</td><td>${s.service}</td><td>${s.staff}</td></tr>`).join('') || '<tr><td colspan="4">No bookings today.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function renderBookings(el) {
+  const today = new Date().toISOString().slice(0, 10);
+  const resp = await api(`/api/tenant/admin/bookings?date=${today}`);
+  const bookings = await resp.json();
+  el.innerHTML = `
+    <div class="panel">
+      <h3>Bookings — ${today}</h3>
+      <table>
+        <thead><tr><th>Time</th><th>Customer</th><th>Service</th><th>Staff</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${bookings.map(b => `<tr>
+            <td>${new Date(b.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+            <td>${b.customer}</td><td>${b.service}</td><td>${b.staff}</td>
+            <td><span class="tag ${b.status === 'confirmed' ? '' : 'warn'}">${b.status}</span></td>
+            <td>${b.status !== 'cancelled' ? `<button onclick="cancelBooking(${b.id})">Cancel</button>` : ''}</td>
+          </tr>`).join('') || '<tr><td colspan="6">No bookings today.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function cancelBooking(id) {
+  await api(`/api/tenant/admin/bookings/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) });
+  renderBookings(document.getElementById('tab-content'));
+}
+
+async function renderStaff(el) {
+  const [staffResp, servicesResp] = await Promise.all([
+    api('/api/tenant/admin/staff'), api('/api/tenant/admin/services'),
+  ]);
+  const staff = await staffResp.json();
+  const services = await servicesResp.json();
+  el.innerHTML = `
+    <div class="panel">
+      <h3>Services</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Duration</th><th>Price</th></tr></thead>
+        <tbody>${services.map(s => `<tr><td>${s.name}</td><td>${s.duration_minutes}min</td><td>${s.price} KD</td></tr>`).join('') || '<tr><td colspan="3">No services yet.</td></tr>'}</tbody>
+      </table>
+      <div class="form-row" style="margin-top:10px;">
+        <input id="svc-name" placeholder="Service name">
+        <input id="svc-duration" placeholder="Duration (min)" style="max-width:110px;">
+        <input id="svc-price" placeholder="Price (KD)" style="max-width:100px;">
+        <button onclick="addService()">Add</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Staff</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Gender</th><th>Services</th><th>Calendar</th></tr></thead>
+        <tbody>${staff.map(s => `<tr>
+          <td>${s.name}</td><td>${s.gender || '—'}</td><td>${s.services.join(', ') || '—'}</td>
+          <td>${s.calendar_connected
+            ? '<span class="tag">Connected</span>'
+            : `<span class="tag danger">Not connected</span> <button onclick="connectCalendar(${s.id})">Connect (dev)</button>`}</td>
+        </tr>`).join('') || '<tr><td colspan="4">No staff yet.</td></tr>'}</tbody>
+      </table>
+      <p style="font-size:12px;color:var(--muted);">A staff member without a connected calendar never appears as bookable in chat — this isn't a warning you can dismiss.</p>
+      <div class="form-row" style="margin-top:10px;">
+        <input id="staff-name" placeholder="Staff name">
+        <input id="staff-gender" placeholder="Gender (optional)">
+        <button onclick="addStaff()">Add</button>
+      </div>
+    </div>
+  `;
+}
+
+async function addService() {
+  const name = document.getElementById('svc-name').value;
+  const duration_minutes = parseInt(document.getElementById('svc-duration').value, 10);
+  const price = parseFloat(document.getElementById('svc-price').value);
+  if (!name || !duration_minutes || !price) return;
+  await api('/api/tenant/admin/services', { method: 'POST', body: JSON.stringify({ name, duration_minutes, price }) });
+  renderStaff(document.getElementById('tab-content'));
+}
+
+async function addStaff() {
+  const name = document.getElementById('staff-name').value;
+  const gender = document.getElementById('staff-gender').value || null;
+  if (!name) return;
+  await api('/api/tenant/admin/staff', { method: 'POST', body: JSON.stringify({ name, gender, service_ids: [] }) });
+  renderStaff(document.getElementById('tab-content'));
+}
+
+async function connectCalendar(staffId) {
+  await api(`/api/tenant/admin/staff/${staffId}/connect-calendar`, { method: 'POST', body: JSON.stringify({ provider: 'google' }) });
+  renderStaff(document.getElementById('tab-content'));
+}
+
+async function renderKnowledge(el) {
+  const [docsResp, unansweredResp] = await Promise.all([
+    api('/api/tenant/admin/knowledge'), api('/api/tenant/admin/knowledge/unanswered'),
+  ]);
+  const docs = await docsResp.json();
+  const unanswered = await unansweredResp.json();
+  el.innerHTML = `
+    ${unanswered.length ? `
+    <div class="panel">
+      <h3>${unanswered.length} question${unanswered.length > 1 ? 's' : ''} the assistant couldn't answer</h3>
+      ${unanswered.map(u => `<p style="font-size:13px;">"${u.question}"</p>`).join('')}
+    </div>` : ''}
+    <div class="panel">
+      <h3>Uploaded documents</h3>
+      <table>
+        <thead><tr><th>File</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody>${docs.map(d => `<tr><td>${d.filename}</td><td>${new Date(d.uploaded_at).toLocaleDateString()}</td><td><button onclick="deleteDoc(${d.id})">Delete</button></td></tr>`).join('') || '<tr><td colspan="3">No documents yet.</td></tr>'}</tbody>
+      </table>
+      <div class="form-row" style="margin-top:10px; flex-direction:column;">
+        <input id="kb-filename" placeholder="Filename (e.g. faq.md)">
+        <textarea id="kb-content" placeholder="Content" rows="4"></textarea>
+        <button onclick="uploadDoc()">Upload</button>
+      </div>
+    </div>
+  `;
+}
+
+async function uploadDoc() {
+  const filename = document.getElementById('kb-filename').value;
+  const content = document.getElementById('kb-content').value;
+  if (!filename || !content) return;
+  await api('/api/tenant/admin/knowledge', { method: 'POST', body: JSON.stringify({ filename, content }) });
+  renderKnowledge(document.getElementById('tab-content'));
+}
+
+async function deleteDoc(id) {
+  await api(`/api/tenant/admin/knowledge/${id}`, { method: 'DELETE' });
+  renderKnowledge(document.getElementById('tab-content'));
+}
+</script>
+</body>
+</html>
