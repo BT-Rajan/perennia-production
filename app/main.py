@@ -41,6 +41,7 @@ from app.security import (
 from app.core.auth_routes import router as tenant_auth_router
 from app.core.customer_routes import router as customer_reception_router
 from app.core.admin_routes import router as tenant_admin_router
+from app.core.platform_routes import router as platform_admin_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("perennia")
@@ -55,6 +56,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(tenant_auth_router)
 app.include_router(customer_reception_router)
 app.include_router(tenant_admin_router)
+app.include_router(platform_admin_router)
 
 if settings.ALLOWED_ORIGINS:
     app.add_middleware(
@@ -141,6 +143,18 @@ def serve_tenant_admin():
     convention as /reception for the initial login call.
     """
     return FileResponse(settings.PUBLIC_DIR / "tenant-admin.html")
+
+
+@app.get("/platform-admin")
+def serve_platform_admin():
+    """
+    Platform admin panel (docs/10-platform-admin-ui-spec.md), Pass 2 scope:
+    Tenants list, Tenant detail (Overview + Feature Flags tabs). Reuses the
+    existing single-admin login (/api/admin/login) — see
+    app/core/platform_routes.py for why a new platform_users auth system
+    isn't built yet.
+    """
+    return FileResponse(settings.PUBLIC_DIR / "platform-admin.html")
 
 
 # ═══════════════════════════════════════════════════════════════════
