@@ -46,6 +46,13 @@ class AppConfig(TenantBase):
     llm_model = Column(String(128), nullable=True)
     llm_base_url = Column(String(255), nullable=True)
     llm_api_key_encrypted = Column(Text, nullable=True)
+    # Pass 3: secondary provider for failover (docs/06) — if the primary
+    # is unreachable/erroring, this is tried before falling back to a
+    # clear degraded-mode message. Optional; failover is skipped if unset.
+    llm_secondary_provider = Column(String(32), nullable=True)
+    llm_secondary_model = Column(String(128), nullable=True)
+    llm_secondary_base_url = Column(String(255), nullable=True)
+    llm_secondary_api_key_encrypted = Column(Text, nullable=True)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
 

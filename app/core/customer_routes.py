@@ -172,6 +172,7 @@ async def chat_endpoint(
                                "details": {}}},
         )
     api_key = decrypt_secret(config.llm_api_key_encrypted)
+    secondary_api_key = decrypt_secret(config.llm_secondary_api_key_encrypted) if config.llm_secondary_api_key_encrypted else None
 
     result = await chat_module.handle_chat_message(
         ctx.tenant_session, conversation=convo, user_message=body.message,
@@ -179,5 +180,9 @@ async def chat_endpoint(
         model=config.llm_model or "claude-haiku-4-5-20251001",
         base_url=config.llm_base_url or "",
         tenant_subdomain=ctx.tenant.subdomain, customer_phone=body.customer_phone,
+        secondary_provider=config.llm_secondary_provider,
+        secondary_api_key=secondary_api_key,
+        secondary_model=config.llm_secondary_model,
+        secondary_base_url=config.llm_secondary_base_url,
     )
     return {"conversation_id": convo.id, "reply": result["reply"], "fallback": result["fallback"]}

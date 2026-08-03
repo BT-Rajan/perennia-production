@@ -90,12 +90,22 @@ async def handle_chat_message(
     base_url: str,
     tenant_subdomain: str,
     customer_phone: str | None = None,
+    secondary_provider: str | None = None,
+    secondary_api_key: str | None = None,
+    secondary_model: str | None = None,
+    secondary_base_url: str | None = None,
 ) -> dict:
     """
     Persists the user message, calls the LLM with tenant-scoped grounding,
     detects the fallback marker, persists the assistant reply (with
     was_fallback recorded), and triggers a handoff notification when
     grounding failed. Returns {"reply": str, "fallback": bool}.
+
+    LLM failover (docs/06 Pass 3): if the primary provider call raises,
+    and a secondary provider is configured, it's tried before giving up.
+    If both fail (or no secondary is configured), this returns a clear,
+    honest "temporarily unable to answer" message — never a silent
+    failure, and never a fabricated answer standing in for a real one.
     """
     session.add(Message(conversation_id=conversation.id, role="user", content=user_message))
     session.flush()
@@ -110,10 +120,49 @@ async def handle_chat_message(
 
     system_prompt = build_system_prompt(session, conversation.language)
 
-    raw_reply = await llm.chat_completion(
-        provider=provider, api_key=api_key, model=model, base_url=base_url,
-        system_prompt=system_prompt, messages=llm_messages,
-    )
+    raw_reply = None
+    used_secondary = False
+    primary_error = None
+    try:
+        raw_reply = await llm.chat_completion(
+            provider=provider, api_key=api_key, model=model, base_url=base_url,
+            system_prompt=system_prompt, messages=llm_messages,
+        )
+    except llm.LLMError as e:
+        primary_error = e
+        if secondary_provider and secondary_api_key:
+            try:
+                raw_reply = await llm.chat_completion(
+                    provider=secondary_provider, api_key=secondary_api_key,
+                    model=secondary_model or "", base_url=secondary_base_url or "",
+                    system_prompt=system_prompt, messages=llm_messages,
+                )
+                used_secondary = True
+            except llm.LLMError:
+                raw_reply = None
+
+    if raw_reply is None:
+        # Both providers failed (or no secondary configured). Honest
+        # degraded-mode message — never a guess, never a silent drop.
+        degraded_text = (
+            "عذرًا، أواجه صعوبة في الإجابة الآن. سيتواصل معك أحد أفراد الفريق قريبًا."
+            if conversation.language == "ar" else
+            "Sorry, I'm having trouble answering right now — someone from the team will follow up with you shortly."
+        )
+        session.add(Message(conversation_id=conversation.id, role="assistant",
+                             content=degraded_text, was_fallback=True))
+        session.flush()
+        write_audit_log(
+            session, actor="chat-bot", action="chat.llm_unavailable",
+            target_type="conversation", target_id=conversation.id,
+            detail={"question": user_message, "primary_error": str(primary_error) if primary_error else None},
+        )
+        get_notifier().send_handoff_alert(
+            tenant_subdomain=tenant_subdomain,
+            customer_phone=customer_phone or "unknown",
+            context=f"LLM unavailable: {user_message}",
+        )
+        return {"reply": degraded_text, "fallback": True}
 
     is_fallback = raw_reply.strip().startswith(_FALLBACK_MARKER)
     reply_text = raw_reply.strip()
@@ -123,6 +172,13 @@ async def handle_chat_message(
     session.add(Message(conversation_id=conversation.id, role="assistant",
                          content=reply_text, was_fallback=is_fallback))
     session.flush()
+
+    if used_secondary:
+        write_audit_log(
+            session, actor="chat-bot", action="chat.failover_used",
+            target_type="conversation", target_id=conversation.id,
+            detail={"primary_error": str(primary_error)},
+        )
 
     if is_fallback:
         write_audit_log(
