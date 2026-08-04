@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PERENNIA | بيرينيا</title>
 <meta name="description" content="Perennia — AI-powered technology and innovation.">
+<script>
+// Set the correct lang/dir before first paint — avoids a flash of
+// English/LTR for a returning Arabic user or an Arabic-locale browser.
+// Kept in sync with getInitialLang() further down in the page script.
+(function () {
+  try {
+    var l = null;
+    try { var saved = localStorage.getItem('perennia_lang'); if (saved === 'en' || saved === 'ar') l = saved; } catch (e) {}
+    if (!l) {
+      var nav = ((navigator.language || (navigator.languages && navigator.languages[0]) || '') + '').toLowerCase();
+      l = nav.indexOf('ar') === 0 ? 'ar' : 'en';
+    }
+    if (l === 'ar') { document.documentElement.lang = 'ar'; document.documentElement.dir = 'rtl'; }
+  } catch (e) { /* default en/ltr already set in markup */ }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=Noto+Kufi+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -291,7 +307,7 @@ body.chat-active #home-page { display: none; }
   text-align: center;
   padding: 18px;
   font-size: 10.5px;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.5); /* was 0.2 — measured ~1.8:1 contrast against the navy background, well under WCAG AA's 4.5:1 for normal text; 0.5 measures ~5.2:1 */
   letter-spacing: 0.06em;
 }
 
@@ -966,8 +982,8 @@ main.chat-main {
 ═══════════════════════════════════════════════════════════ */
 
 const HOME_TXT = {
-  en: { welcome: 'Welcome to Perennia', tagline: 'Visit our V-Lounge for more', hint: 'Tap to start chatting', ourWork: 'Our Work', contactUs: 'Contact Us' },
-  ar: { welcome: 'مرحبا بك في بيرينيا', tagline: 'زوروا V-Lounge الخاص بنا لمزيد من المعلومات', hint: 'انقر لبدء الدردشة', ourWork: 'أعمالنا', contactUs: 'اتصل بنا' }
+  en: { welcome: 'Welcome to Perennia', tagline: 'Visit our V-Lounge for more', hint: 'Start chatting', ourWork: 'Our Work', contactUs: 'Contact Us' },
+  ar: { welcome: 'مرحبا بك في بيرينيا', tagline: 'زوروا V-Lounge الخاص بنا لمزيد من المعلومات', hint: 'ابدأ المحادثة', ourWork: 'أعمالنا', contactUs: 'اتصل بنا' }
 };
 
 const COPY = {
@@ -1096,7 +1112,23 @@ const COPY = {
 };
 
 // ── State ─────────────────────────────────────────────────
-let lang = 'en';
+const LANG_STORAGE_KEY = 'perennia_lang';
+
+function getInitialLang() {
+  // 1) Respect a language the user has explicitly chosen before.
+  try {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY);
+    if (saved === 'en' || saved === 'ar') return saved;
+  } catch (e) { /* localStorage unavailable (private mode, etc.) — fall through */ }
+  // 2) First visit: default Arabic-locale browsers to Arabic.
+  try {
+    const nav = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+    if (nav.startsWith('ar')) return 'ar';
+  } catch (e) { /* navigator.language unavailable — fall through */ }
+  return 'en';
+}
+
+let lang = getInitialLang();
 let history = [];
 let busy = false;
 let aiAvatarSrc = null;
@@ -1516,6 +1548,7 @@ function send() {
 // ── Language toggle (shared between home page and chat page) ──
 function toggleLang() {
   lang = lang === 'en' ? 'ar' : 'en';
+  try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) { /* private mode, etc. — non-fatal */ }
   history = [];
   chatLocked = false;
   const inp = document.getElementById('input');
