@@ -35,7 +35,9 @@ from app.security import (
     new_csrf_token, csrf_tokens_match, mask_key,
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+from app.logging_config import configure_app_logging
+
+configure_app_logging()
 log = logging.getLogger("perennia")
 
 limiter = Limiter(key_func=get_remote_address)
