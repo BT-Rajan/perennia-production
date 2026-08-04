@@ -14,6 +14,7 @@ import threading
 import uuid
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request, Response, UploadFile, File, Form, HTTPException, Depends
@@ -521,6 +522,28 @@ class ConfigUpdate(BaseModel):
 
 ALLOWED_PROVIDERS = {"anthropic", "deepseek", "openai", "custom"}
 
+# Landing page links (Our Work / Contact Us) go straight into
+# `window.location.href` / `window.open` on the frontend with no further
+# checking, so a scheme like `javascript:` or `data:` would execute in the
+# visitor's browser. Only allow the schemes an admin would legitimately
+# want here — everything else is rejected outright rather than silently
+# stripped, so a mistyped URL fails loudly instead of quietly saving broken.
+ALLOWED_LANDING_URL_SCHEMES = {"", "http", "https", "mailto", "tel"}
+
+
+def _validate_landing_url(value: str) -> str:
+    value = value.strip()
+    if not value:
+        return ""
+    scheme = urlsplit(value).scheme.lower()
+    if scheme not in ALLOWED_LANDING_URL_SCHEMES:
+        raise HTTPException(
+            400,
+            f"Unsupported link type '{scheme}:' for this field. "
+            "Use a web address (https://…), mailto:, tel:, or a relative path (/contact).",
+        )
+    return value
+
 
 def _public_config_view(config: dict) -> dict:
     api_key = storage.get_decrypted_api_key(config)
@@ -571,7 +594,7 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
             if key in ["welcomeText-en", "welcomeText-ar", "tagline-en", "tagline-ar"]:
                 landing[key] = str(value)[:500]
             elif key in ["ourWorkUrl", "contactUrl"]:
-                landing[key] = str(value)[:2000]
+                landing[key] = _validate_landing_url(str(value)[:2000])
         config["landing"] = landing
     
     # Booking prompts config
