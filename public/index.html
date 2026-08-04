@@ -81,15 +81,24 @@ body::before {
   position: fixed;
   top: 20px;
   right: 20px;
+  left: 20px;
   z-index: 200;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   transition: right 0.3s, left 0.3s;
 }
-[dir="rtl"] .top-bar { right: auto; left: 20px; }
+[dir="rtl"] .top-bar { justify-content: flex-start; }
 @media (max-width: 640px) {
-  .top-bar { top: 12px; right: 12px; }
-  [dir="rtl"] .top-bar { left: 12px; }
+  .top-bar { top: 12px; right: 12px; left: 12px; gap: 6px; }
+}
+@media (max-width: 380px) {
+  /* Narrow/older devices: three pills (Our Work / Contact Us / language)
+     won't fit on one row at normal size — shrink rather than clip or
+     overflow off-screen. flex-wrap above still applies as a fallback if
+     the user has increased their OS text size. */
+  .lang-btn, .nav-pill { font-size: 10.5px; padding: 6px 12px; }
 }
 
 .icon-btn, .lang-btn, .nav-pill {
@@ -270,6 +279,12 @@ body.chat-active #home-page { display: none; }
 }
 .progress-fill.running { transition: width 7s linear; width: 100%; }
 
+@media (prefers-reduced-motion: reduce) {
+  .home-cta { animation: none; }
+  .progress-fill.running { transition: none; width: 0%; }
+  .progress-track { display: none; }
+}
+
 #home-footer {
   position: relative;
   z-index: 1;
@@ -283,6 +298,9 @@ body.chat-active #home-page { display: none; }
 @media (max-width: 640px) {
   .home-center { padding: 90px 20px 40px; gap: 28px; }
   .home-logo-wrap .logo-img { height: 72px; }
+}
+@media (max-width: 380px) {
+  .home-center { padding-top: 108px; } /* extra clearance in case the top-bar wraps to 2 rows */
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -740,8 +758,8 @@ main.chat-main {
 <!-- ─── HOME / LANDING PAGE ─── -->
 <div id="home-page">
   <div class="top-bar">
-    <button class="nav-pill" id="our-work-link">Our Work</button>
-    <button class="nav-pill" id="contact-link">Contact Us</button>
+    <button class="nav-pill" id="our-work-link" style="display:none">Our Work</button>
+    <button class="nav-pill" id="contact-link" style="display:none">Contact Us</button>
     <button class="lang-btn" id="home-lang-btn" onclick="toggleLang()">AR | عربي</button>
   </div>
 
@@ -1096,11 +1114,17 @@ function checkAvatar() {
   return new Promise(resolve => {
     const candidates = ['static/images/ai_avatar.svg', 'static/images/ai_avatar.png'];
     let i = 0;
+    let settled = false;
+    // A stalled/never-responding image request must never block the rest
+    // of the app from becoming usable — give up after 3s either way.
+    const done = () => { if (!settled) { settled = true; resolve(); } };
+    setTimeout(done, 3000);
     const tryNext = () => {
-      if (i >= candidates.length) { aiAvatarSrc = null; resolve(); return; }
+      if (settled) return;
+      if (i >= candidates.length) { aiAvatarSrc = null; done(); return; }
       const src = candidates[i++] + '?t=' + Date.now();
       const img = new Image();
-      img.onload  = () => { aiAvatarSrc = src; resolve(); };
+      img.onload  = () => { aiAvatarSrc = src; done(); };
       img.onerror = tryNext;
       img.src = src;
     };
@@ -1176,8 +1200,16 @@ function renderHomeUI() {
   document.getElementById('home-welcome-text').textContent = h.welcome;
   document.getElementById('home-tagline-text').textContent = h.tagline;
   document.getElementById('home-hint-text').textContent = h.hint;
-  document.getElementById('our-work-link').textContent = h.ourWork;
-  document.getElementById('contact-link').textContent = h.contactUs;
+
+  const ourWorkEl = document.getElementById('our-work-link');
+  const contactEl = document.getElementById('contact-link');
+  ourWorkEl.textContent = h.ourWork;
+  contactEl.textContent = h.contactUs;
+  // Only show these once we actually know a destination is configured —
+  // an admin who hasn't set one yet shouldn't ship a button that does
+  // nothing when tapped.
+  ourWorkEl.style.display = window.ourWorkUrl ? 'flex' : 'none';
+  contactEl.style.display = window.contactUrl ? 'flex' : 'none';
 
   const isAr = lang === 'ar';
   document.getElementById('home-logo-en').style.display = isAr ? 'none' : 'block';
@@ -1186,6 +1218,9 @@ function renderHomeUI() {
 }
 
 function startAutoTransition() {
+  // Users who've asked the OS for reduced motion also get no forced,
+  // timer-driven page transition — they open the chat manually instead.
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   clearAutoTransition();
   const fill = document.getElementById('home-progress');
   fill.classList.remove('running');
@@ -1204,7 +1239,12 @@ function clearAutoTransition() {
 
 async function initHome() {
   try {
-    const response = await fetch('/api/landing-config');
+    // Personalization is optional — never let a slow/hung server block the
+    // app. Abort and fall back to defaults if it takes too long.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch('/api/landing-config', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await response.json();
     if (data.landing) {
       if (data.landing['welcomeText-en']) HOME_TXT.en.welcome = data.landing['welcomeText-en'];
@@ -1219,7 +1259,9 @@ async function initHome() {
   } catch (err) {
     console.log('Using default landing config');
   }
-  renderHomeUI();
+  // Re-render everything (home text + chat chips/etc.) in case
+  // personalized copy arrived after the initial render already happened.
+  renderUI();
 }
 
 document.getElementById('home-center').addEventListener('click', () => openChat());
@@ -1254,7 +1296,11 @@ function closeChat() {
   const el = document.getElementById('chat-page');
   el.classList.remove('active');
   setTimeout(() => { if (!chatOpen) el.style.display = 'none'; }, 400);
-  startAutoTransition();
+  // No auto-transition restart here: the 7s auto-open only ever fires once,
+  // on first page load. A user who deliberately closes the chat has made a
+  // choice — re-forcing them back in on a timer would override that choice
+  // and violates WCAG 2.2.1 (users must control any timed action, not have
+  // it repeatedly re-imposed on them).
 }
 
 // Close chat on ESC
@@ -1783,9 +1829,9 @@ async function requestCancelAppointment() {
 }
 
 // ── Init ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  await checkAvatar();
-  await initHome();
+document.addEventListener('DOMContentLoaded', () => {
+  // Core UI comes up immediately with default copy — the chat must be fully
+  // usable even if the network is slow, offline, or a backend call hangs.
   initSidebarImage();
   renderUI();
   addMsg('ai', COPY[lang].welcome);
@@ -1802,6 +1848,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Home → Chat auto-transition after 7 seconds (cancelled by manual open)
   startAutoTransition();
+
+  // Personalization (assistant avatar, admin-customized landing copy) loads
+  // in the background and re-renders in place when/if it arrives — it never
+  // blocks or delays the app becoming usable.
+  checkAvatar().then(() => {
+    // If a custom avatar loaded after the welcome message already rendered
+    // with the fallback letter avatar, swap it in on any AI bubbles shown so far.
+    if (aiAvatarSrc) {
+      document.querySelectorAll('.msg.ai .avatar').forEach(av => { av.innerHTML = avatarInner('ai'); });
+    }
+  });
+  initHome();
 });
 </script>
 
