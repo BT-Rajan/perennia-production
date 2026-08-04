@@ -257,7 +257,7 @@
     <div class="sb-top">
       <div class="sb-logo-wrap" id="sb-logo-wrap">
         <img class="sb-logo-img" id="sb-logo-img" alt="" style="display:none">
-        <div class="sb-logo" id="sb-logo-text" style="display:none"></div>
+        <div class="sb-logo" id="sb-logo-text">Perennia</div>
       </div>
       <div class="sb-tag">Admin Panel</div>
     </div>
@@ -1282,10 +1282,14 @@ function refreshSbLogo() {
   const img = document.getElementById('sb-logo-img');
   const txt = document.getElementById('sb-logo-text');
   if (!img || !txt) return;
+  // Show the correct brand text right away — the image probe below only
+  // ever upgrades this to the logo image, so there's never a blank or
+  // stale-labelled sidebar while the probe is in flight.
+  txt.textContent = brandEn;
   const src = `static/images/logo_en.png?t=` + Date.now();
   const probe = new Image();
   probe.onload = () => { img.src = src; img.alt = brandEn; img.style.display = 'block'; txt.style.display = 'none'; };
-  probe.onerror = () => { img.style.display = 'none'; txt.style.display = 'block'; txt.textContent = brandEn; };
+  probe.onerror = () => { img.style.display = 'none'; txt.style.display = 'block'; };
   probe.src = src;
 }
 

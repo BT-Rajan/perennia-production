@@ -338,7 +338,7 @@ body.chat-active #home-page { display: none; }
 }
 #chat-page.active { display: flex; opacity: 1; transform: scale(1); }
 
-.chat-page-logo { position: fixed; top: 20px; left: 20px; z-index: 150; }
+.chat-page-logo { position: fixed; top: 20px; left: 20px; z-index: 1001; }
 [dir="rtl"] .chat-page-logo { left: auto; right: 20px; }
 .chat-page-logo .logo-img { height: 42px; }
 @media (max-width: 640px) {
@@ -782,13 +782,9 @@ main.chat-main {
 
   <div class="home-center" id="home-center">
     <div class="logo-wrap home-logo-wrap">
-      <img class="logo-img" id="home-logo-en" src="static/images/logo_en.png" alt=""
-           onerror="this.style.display='none'; document.getElementById('home-wordmark-en').style.display='block';"
-           style="display:none;">
+      <img class="logo-img" id="home-logo-en" alt="" style="display:none;">
       <span class="wordmark" id="home-wordmark-en" style="display:none;"></span>
-      <img class="logo-img" id="home-logo-ar" src="static/images/logo_ar.png" alt=""
-           onerror="this.style.display='none'; document.getElementById('home-wordmark-ar').style.display='block';"
-           style="display:none;">
+      <img class="logo-img" id="home-logo-ar" alt="" style="display:none;">
       <span class="wordmark" id="home-wordmark-ar" style="display:none;"></span>
     </div>
 
@@ -809,13 +805,9 @@ main.chat-main {
 
 <!-- ─── CHAT PAGE ─── -->
 <div class="chat-page-logo logo-wrap" id="chat-page-logo-wrap">
-  <img class="logo-img" id="logo-en" src="static/images/logo_en.png" alt=""
-       onerror="this.style.display='none'; document.getElementById('wordmark-en').style.display='block';"
-       style="display:none;">
+  <img class="logo-img" id="logo-en" alt="" style="display:none;">
   <span class="wordmark" id="wordmark-en" style="display:none; font-size:20px;"></span>
-  <img class="logo-img" id="logo-ar" src="static/images/logo_ar.png" alt=""
-       onerror="this.style.display='none'; document.getElementById('wordmark-ar').style.display='block';"
-       style="display:none;">
+  <img class="logo-img" id="logo-ar" alt="" style="display:none;">
   <span class="wordmark" id="wordmark-ar" style="display:none; font-size:20px;"></span>
 </div>
 
@@ -1046,6 +1038,9 @@ function applyBrandConfig(landingIn) {
    also runs on every language toggle so switching languages can't leave
    a stale image visible next to the wordmark or vice-versa. ── */
 window.hasLogo = { en: false, ar: false };
+// Cache-bust once per page load (not per call) so re-rendering on a
+// language toggle doesn't re-fetch the image every time.
+window._logoCacheBust = Date.now();
 
 function applyLogoVisibility() {
   ['home-', ''].forEach(prefix => {
@@ -1054,8 +1049,19 @@ function applyLogoVisibility() {
       const wm = document.getElementById(prefix + 'wordmark-' + code);
       if (!img || !wm) return;
       if (code !== lang) { img.style.display = 'none'; wm.style.display = 'none'; return; }
-      if (window.hasLogo[code]) { img.style.display = 'block'; wm.style.display = 'none'; }
-      else { img.style.display = 'none'; wm.style.display = 'block'; }
+      if (window.hasLogo[code]) {
+        // Set (or refresh) the src with a cache-busting param so a
+        // logo uploaded after this tab was first loaded — or a stale
+        // cached 404 from before any logo existed — can't leave a
+        // broken image in place instead of the real one.
+        const wanted = `static/images/logo_${code}.png?v=${window._logoCacheBust}`;
+        if (img.getAttribute('src') !== wanted) img.src = wanted;
+        img.style.display = 'block';
+        wm.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        wm.style.display = 'block';
+      }
     });
   });
 }
@@ -1321,15 +1327,18 @@ function renderHomeUI() {
 }
 
 function startAutoTransition() {
-  // Users who've asked the OS for reduced motion also get no forced,
-  // timer-driven page transition — they open the chat manually instead.
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   clearAutoTransition();
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fill = document.getElementById('home-progress');
-  fill.classList.remove('running');
-  // force reflow so the width:0 reset takes effect before we animate again
-  void fill.offsetWidth;
-  fill.classList.add('running');
+  // Users who've asked the OS for reduced motion still land on the chat
+  // screen automatically — they just don't get the animated progress
+  // bar counting down to it.
+  if (!reducedMotion) {
+    fill.classList.remove('running');
+    // force reflow so the width:0 reset takes effect before we animate again
+    void fill.offsetWidth;
+    fill.classList.add('running');
+  }
   autoTransitionTimer = setTimeout(() => { openChat(); }, 7000);
 }
 
