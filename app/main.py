@@ -103,12 +103,25 @@ def health():
 
 @app.get("/")
 def serve_index():
-    return FileResponse(settings.PUBLIC_DIR / "index.html")
+    # No Cache-Control was set here before, so browsers fell back to
+    # heuristic caching (RFC 7234) based on Last-Modified alone — a
+    # visitor's browser could keep serving a stale copy of this page
+    # (stale JS, stale logo-display logic, etc.) on a normal reload,
+    # without ever re-checking with the server. Forcing revalidation
+    # means admin changes (logo, branding, copy) always show up on the
+    # next reload instead of requiring visitors to hard-refresh.
+    return FileResponse(
+        settings.PUBLIC_DIR / "index.html",
+        headers={"Cache-Control": "no-cache, must-revalidate"},
+    )
 
 
 @app.get("/admin")
 def serve_admin():
-    return FileResponse(settings.PUBLIC_DIR / "admin.html")
+    return FileResponse(
+        settings.PUBLIC_DIR / "admin.html",
+        headers={"Cache-Control": "no-cache, must-revalidate"},
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════
