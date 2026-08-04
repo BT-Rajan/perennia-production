@@ -226,6 +226,22 @@
     code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 3px; font-size: 0.85em; font-family: monospace; }
     hr.div { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
 
+    /* Setup wizard */
+    .wiz-bar { display: none; padding: 0.9rem 1.75rem 0; }
+    .wiz-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+    .wiz-label { font-size: 0.78rem; font-weight: 700; color: var(--navy); }
+    .wiz-exit { background: none; border: none; font-family: inherit; font-size: 0.72rem; font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: underline; }
+    .wiz-exit:hover { color: var(--navy); }
+    .wiz-dots { display: flex; gap: 0.4rem; }
+    .wiz-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+    .wiz-dot.active { background: var(--gold); }
+    .wiz-dot.done { background: var(--navy); }
+    body.wizard-mode .content { padding-bottom: 5.5rem; }
+    .wiz-footer { display: none; position: fixed; left: var(--sidebar); right: 0; bottom: 0; z-index: 60; background: rgba(240,239,235,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 0.9rem 1.75rem; justify-content: space-between; align-items: center; }
+    body.wizard-mode .wiz-footer { display: flex; }
+    body.wizard-mode .wiz-bar { display: block; }
+    @media (max-width: 680px) { .wiz-footer { left: 0; } }
+
     /* Toast */
     #toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(12px); background: #111; color: #fff; padding: 0.6rem 1.4rem; border-radius: 100px; font-size: 0.82rem; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.25s ease; white-space: nowrap; z-index: 1000; }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -267,7 +283,11 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Dashboard
       </a>
-      <div class="sb-section">AI</div>
+      <a class="sb-item" onclick="startWizard()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5 2.3-7.2-6-4.6h7.6z"/></svg>
+        Setup Wizard
+      </a>
+      <div class="sb-section">Assistant Setup</div>
       <a class="sb-item" data-p="ai" onclick="go(this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
         Provider & Model
@@ -276,20 +296,19 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>
         Persona & Files
       </a>
-      <div class="sb-section">Content</div>
-      <a class="sb-item" data-p="branding" onclick="go(this)">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-        Branding & Copy
-      </a>
       <a class="sb-item" data-p="chat" onclick="go(this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Chat Knowledge
+      </a>
+      <div class="sb-section">Website Content</div>
+      <a class="sb-item" data-p="branding" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        Branding & Copy
       </a>
       <a class="sb-item" data-p="contact" onclick="go(this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.07 1.17h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></svg>
         Contact Details
       </a>
-      <div class="sb-section">Assets</div>
       <a class="sb-item" data-p="logo" onclick="go(this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         Logo Upload
@@ -318,6 +337,14 @@
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Preview Site
       </a>
+    </div>
+
+    <div class="wiz-bar" id="wizard-bar">
+      <div class="wiz-top">
+        <span class="wiz-label" id="wiz-label">Step 1 of 6</span>
+        <button class="wiz-exit" onclick="exitWizard()">Exit setup</button>
+      </div>
+      <div class="wiz-dots" id="wiz-dots"></div>
     </div>
 
     <div class="content">
@@ -356,6 +383,10 @@
             <div class="d-name">Appointments</div>
             <div class="d-desc">Bookings & daily activity</div>
           </div>
+        </div>
+        <div class="sum-bar">
+          <div><div class="sum-text">New here?</div><div class="sum-sub">Walk through provider, branding, persona, knowledge, contact & logo in one guided flow.</div></div>
+          <button class="btn-save" onclick="startWizard()">Start Setup Wizard</button>
         </div>
         <div class="info">
           <strong>Getting started:</strong><br>
@@ -750,6 +781,11 @@
 
     </div><!-- /content -->
   </div><!-- /main -->
+
+  <div class="wiz-footer" id="wiz-footer">
+    <button class="btn-2" id="wiz-back" onclick="wizardBack()">Back</button>
+    <button class="btn-save" id="wiz-next" onclick="wizardNext()">Next</button>
+  </div>
 </div><!-- /app -->
 
 <div id="toast"></div>
@@ -824,16 +860,76 @@ document.getElementById('lp').addEventListener('keydown', e => { if (e.key === '
 const TITLES = { dash:'Dashboard', ai:'Provider & Model', assistant:'Persona & Files', branding:'Branding & Copy', chat:'Chat Knowledge', contact:'Contact Details', logo:'Logo Upload', appt:'Appointments' };
 
 function go(el) {
-  event.preventDefault();
+  event?.preventDefault();
   document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('on'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
   el.classList.add('on');
   const id = el.dataset.p;
   document.getElementById('p-' + id).classList.add('on');
   document.getElementById('tb-title').textContent = TITLES[id] || '';
+  if (wizardActive && !wizardNavigating) exitWizard();
 }
 
 function navTo(id) { const el = document.querySelector(`[data-p="${id}"]`); if (el) go(el); }
+
+// ── Setup Wizard: steps through the existing panels in order,
+//    saving each step's own data before advancing. No fields are
+//    duplicated — it just drives the same forms and save functions. ──
+const WIZARD_STEPS = [
+  { id: 'ai',        label: 'AI Provider & Model', save: () => saveAI() },
+  { id: 'branding',  label: 'Branding & Copy',      save: () => saveBranding() },
+  { id: 'assistant', label: 'Persona & Tone',       save: () => saveTone() },
+  { id: 'chat',      label: 'Chat Knowledge',       save: () => saveCK() },
+  { id: 'contact',   label: 'Contact Details',      save: () => saveContact() },
+  { id: 'logo',      label: 'Logo Upload',          save: null },
+];
+let wizardActive = false;
+let wizardNavigating = false;
+let wizardIdx = 0;
+
+function startWizard() {
+  wizardActive = true;
+  wizardIdx = 0;
+  document.body.classList.add('wizard-mode');
+  showWizardStep();
+}
+
+function showWizardStep() {
+  const step = WIZARD_STEPS[wizardIdx];
+  wizardNavigating = true;
+  navTo(step.id);
+  wizardNavigating = false;
+  document.getElementById('wiz-label').textContent = `Step ${wizardIdx + 1} of ${WIZARD_STEPS.length} — ${step.label}`;
+  document.getElementById('wiz-back').disabled = wizardIdx === 0;
+  document.getElementById('wiz-next').textContent = wizardIdx === WIZARD_STEPS.length - 1 ? 'Finish' : 'Next';
+  document.getElementById('wiz-dots').innerHTML = WIZARD_STEPS
+    .map((s, i) => `<span class="wiz-dot ${i < wizardIdx ? 'done' : ''} ${i === wizardIdx ? 'active' : ''}"></span>`)
+    .join('');
+}
+
+async function wizardNext() {
+  const step = WIZARD_STEPS[wizardIdx];
+  if (step.save) { try { await step.save(); } catch {} }
+  if (wizardIdx === WIZARD_STEPS.length - 1) {
+    exitWizard();
+    toast('✔ Setup complete', 'ok');
+    return;
+  }
+  wizardIdx++;
+  showWizardStep();
+}
+
+function wizardBack() {
+  if (wizardIdx === 0) return;
+  wizardIdx--;
+  showWizardStep();
+}
+
+function exitWizard() {
+  wizardActive = false;
+  document.body.classList.remove('wizard-mode');
+  navTo('dash');
+}
 
 // ── Toast ─────────────────────────────────────────
 function toast(msg, type = '') {
