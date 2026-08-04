@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PERENNIA | بيرينيا</title>
-<meta name="description" content="Perennia — AI-powered technology and innovation.">
+<!-- title/description are set from admin-configured brand config via applyBrandConfig() on load -->
+<title>Perennia</title>
+<meta name="description" content="">
 <script>
 // Set the correct lang/dir before first paint — avoids a flash of
 // English/LTR for a returning Arabic user or an Arabic-locale browser.
@@ -781,41 +782,41 @@ main.chat-main {
 
   <div class="home-center" id="home-center">
     <div class="logo-wrap home-logo-wrap">
-      <img class="logo-img" id="home-logo-en" src="static/images/logo_en.png" alt="Perennia"
+      <img class="logo-img" id="home-logo-en" src="static/images/logo_en.png" alt=""
            onerror="this.style.display='none'; document.getElementById('home-wordmark-en').style.display='block';"
-           style="display:block;">
-      <span class="wordmark" id="home-wordmark-en">PEREN<span class="g">NIA</span></span>
-      <img class="logo-img" id="home-logo-ar" src="static/images/logo_ar.png" alt="بيرينيا"
+           style="display:none;">
+      <span class="wordmark" id="home-wordmark-en" style="display:none;"></span>
+      <img class="logo-img" id="home-logo-ar" src="static/images/logo_ar.png" alt=""
            onerror="this.style.display='none'; document.getElementById('home-wordmark-ar').style.display='block';"
            style="display:none;">
-      <span class="wordmark" id="home-wordmark-ar" style="display:none;">بيرينيا</span>
+      <span class="wordmark" id="home-wordmark-ar" style="display:none;"></span>
     </div>
 
     <div class="tagline-wrap">
-      <div class="home-welcome" id="home-welcome-text">Welcome to Perennia</div>
+      <div class="home-welcome" id="home-welcome-text"></div>
     </div>
 
-    <div class="home-tagline" id="home-tagline-text">Visit our V-Lounge for more</div>
+    <div class="home-tagline" id="home-tagline-text"></div>
 
     <button class="home-cta" id="home-cta-btn">
-      <span id="home-hint-text">Tap to start chatting</span>
+      <span id="home-hint-text"></span>
     </button>
     <div class="progress-track"><div class="progress-fill" id="home-progress"></div></div>
   </div>
 
-  <footer id="home-footer">© 2024 PERENNIA · بيرينيا</footer>
+  <footer id="home-footer"></footer>
 </div>
 
 <!-- ─── CHAT PAGE ─── -->
 <div class="chat-page-logo logo-wrap" id="chat-page-logo-wrap">
-  <img class="logo-img" id="logo-en" src="static/images/logo_en.png" alt="Perennia"
+  <img class="logo-img" id="logo-en" src="static/images/logo_en.png" alt=""
        onerror="this.style.display='none'; document.getElementById('wordmark-en').style.display='block';"
-       style="display:block;">
-  <span class="wordmark" id="wordmark-en" style="display:none; font-size:20px;">PEREN<span class="g">NIA</span></span>
-  <img class="logo-img" id="logo-ar" src="static/images/logo_ar.png" alt="بيرينيا"
+       style="display:none;">
+  <span class="wordmark" id="wordmark-en" style="display:none; font-size:20px;"></span>
+  <img class="logo-img" id="logo-ar" src="static/images/logo_ar.png" alt=""
        onerror="this.style.display='none'; document.getElementById('wordmark-ar').style.display='block';"
        style="display:none;">
-  <span class="wordmark" id="wordmark-ar" style="display:none; font-size:20px;">بيرينيا</span>
+  <span class="wordmark" id="wordmark-ar" style="display:none; font-size:20px;"></span>
 </div>
 
 <div id="chat-page">
@@ -970,7 +971,7 @@ main.chat-main {
     </div>
   </main>
 
-  <footer class="chat-footer">© 2024 PERENNIA · بيرينيا</footer>
+  <footer class="chat-footer" id="chat-footer"></footer>
 </div>
 
 <script>
@@ -985,6 +986,79 @@ const HOME_TXT = {
   en: { welcome: 'Welcome to Perennia', tagline: 'Visit our V-Lounge for more', hint: 'Start chatting', ourWork: 'Our Work', contactUs: 'Contact Us' },
   ar: { welcome: 'مرحبا بك في بيرينيا', tagline: 'زوروا V-Lounge الخاص بنا لمزيد من المعلومات', hint: 'ابدأ المحادثة', ourWork: 'أعمالنا', contactUs: 'اتصل بنا' }
 };
+
+/* ── Brand config: every visible brand string (name, title, footer,
+   chat header/greeting/chips, logo alt text) comes from the admin panel
+   via /api/landing-config. These are only the pre-fetch fallbacks so the
+   page isn't blank for the instant before that request resolves — the
+   real values always win once applyBrandConfig() runs. ── */
+const DEFAULT_LANDING = {
+  'brandName-en': 'Perennia', 'brandName-ar': 'بيرينيا',
+  'siteTitle': 'PERENNIA | بيرينيا',
+  'metaDescription': 'Perennia — AI-powered technology and innovation.',
+  'footerText-en': '© 2026 PERENNIA', 'footerText-ar': '© 2026 بيرينيا',
+  'chatHeader-en': "'s AI Assistant — here to help", 'chatHeader-ar': ' الذكي — هنا لمساعدتك',
+  'chatGreeting-en': "Hello! I'm {brand}'s AI assistant. Ask me anything about our company — our solutions, products, industries we serve, or what makes us different.",
+  'chatGreeting-ar': 'مرحباً! أنا المساعد الذكي لـ{brand}. اسألني أي شيء عن شركتنا — حلولنا، منتجاتنا، الصناعات التي نخدمها، أو ما يميزنا.',
+  'chatChips-en': ['What does {brand} do?', 'Tell me about your products', 'Which industries do you serve?', 'What makes you different?'],
+  'chatChips-ar': ['ماذا تفعل {brand}؟', 'أخبرني عن منتجاتكم', 'ما هي الصناعات التي تخدمونها؟', 'ما الذي يميزكم؟'],
+  'sidebarImageAlt-en': 'Perennia Solution', 'sidebarImageAlt-ar': 'حل بيرينيا',
+};
+
+function applyBrandConfig(landingIn) {
+  const L = Object.assign({}, DEFAULT_LANDING, landingIn || {});
+  const brandEn = L['brandName-en'] || 'Perennia';
+  const brandAr = L['brandName-ar'] || brandEn;
+  const fill = (s, brand) => (s || '').split('{brand}').join(brand);
+
+  document.title = L['siteTitle'] || brandEn;
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', L['metaDescription'] || '');
+
+  // Wordmark fallback text — only ever shown when no logo image exists
+  // for that language (see applyLogoVisibility). No hardcoded stylized
+  // splitting of the brand name; it's rendered exactly as configured.
+  ['home-wordmark-en', 'wordmark-en'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = brandEn; });
+  ['home-wordmark-ar', 'wordmark-ar'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = brandAr; });
+  document.querySelectorAll('#home-logo-en, #logo-en').forEach(el => { el.alt = brandEn; });
+  document.querySelectorAll('#home-logo-ar, #logo-ar').forEach(el => { el.alt = brandAr; });
+
+  const footerTxt = `${L['footerText-en']} · ${L['footerText-ar']}`;
+  ['home-footer', 'chat-footer'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = footerTxt; });
+
+  COPY.en.header = ["", brandEn, L['chatHeader-en']];
+  // Arabic keeps the original word order ("مساعد <brand> الذكي…"), which
+  // needs the brand name in the middle of the phrase rather than the front.
+  COPY.ar.header = ['مساعد ', brandAr, L['chatHeader-ar']];
+  COPY.en.welcome = fill(L['chatGreeting-en'], brandEn);
+  COPY.ar.welcome = fill(L['chatGreeting-ar'], brandAr);
+  COPY.en.chips = (L['chatChips-en'] || []).map(c => fill(c, brandEn));
+  COPY.ar.chips = (L['chatChips-ar'] || []).map(c => fill(c, brandAr));
+  COPY.en.sidebarImageAlt = L['sidebarImageAlt-en'] || brandEn;
+  COPY.ar.sidebarImageAlt = L['sidebarImageAlt-ar'] || brandAr;
+  COPY.en.aiAvatar = brandEn.charAt(0).toUpperCase();
+  COPY.ar.aiAvatar = brandAr.charAt(0);
+}
+
+/* ── Logo vs. wordmark: exactly one is ever shown, decided from
+   window.hasLogo (computed server-side from what's actually on disk —
+   see /api/landing-config), not from an <img> load error alone. This
+   also runs on every language toggle so switching languages can't leave
+   a stale image visible next to the wordmark or vice-versa. ── */
+window.hasLogo = { en: false, ar: false };
+
+function applyLogoVisibility() {
+  ['home-', ''].forEach(prefix => {
+    ['en', 'ar'].forEach(code => {
+      const img = document.getElementById(prefix + 'logo-' + code);
+      const wm = document.getElementById(prefix + 'wordmark-' + code);
+      if (!img || !wm) return;
+      if (code !== lang) { img.style.display = 'none'; wm.style.display = 'none'; return; }
+      if (window.hasLogo[code]) { img.style.display = 'block'; wm.style.display = 'none'; }
+      else { img.style.display = 'none'; wm.style.display = 'block'; }
+    });
+  });
+}
 
 const COPY = {
   en: {
@@ -1243,10 +1317,7 @@ function renderHomeUI() {
   ourWorkEl.style.display = window.ourWorkUrl ? 'flex' : 'none';
   contactEl.style.display = window.contactUrl ? 'flex' : 'none';
 
-  const isAr = lang === 'ar';
-  document.getElementById('home-logo-en').style.display = isAr ? 'none' : 'block';
-  document.getElementById('home-logo-ar').style.display = isAr ? 'block' : 'none';
-  if (document.getElementById('home-logo-en').style.display === 'none') document.getElementById('home-wordmark-en').style.display = 'none';
+  applyLogoVisibility();
 }
 
 function startAutoTransition() {
@@ -1285,9 +1356,16 @@ async function initHome() {
       if (data.landing['tagline-ar']) HOME_TXT.ar.tagline = data.landing['tagline-ar'];
       if (data.landing['ourWorkUrl']) window.ourWorkUrl = data.landing['ourWorkUrl'];
       if (data.landing['contactUrl']) window.contactUrl = data.landing['contactUrl'];
+      applyBrandConfig(data.landing);
     }
-    if (data.booking && data.booking['promptsEn']) COPY.en.chips = data.booking['promptsEn'];
-    if (data.booking && data.booking['promptsAr']) COPY.ar.chips = data.booking['promptsAr'];
+    // Note: booking.promptsEn/Ar are the mid-conversation "want to book a
+    // call?" nudges the assistant offers (see bookingPrompts in /api/chat),
+    // not the starter suggestion chips — those come from
+    // landing.chatChips-en/ar via applyBrandConfig above. Keeping the two
+    // separate avoids booking call-to-action sentences showing up as the
+    // opening FAQ chips.
+    window.hasLogo = { en: !!data.hasLogoEn, ar: !!data.hasLogoAr };
+    applyLogoVisibility();
   } catch (err) {
     console.log('Using default landing config');
   }
@@ -1353,10 +1431,7 @@ function renderUI() {
   document.documentElement.lang = lang;
   document.documentElement.dir  = isAr ? 'rtl' : 'ltr';
 
-  const logoEn = document.getElementById('logo-en');
-  const logoAr = document.getElementById('logo-ar');
-  if (isAr) { logoEn.style.display = 'none'; logoAr.style.display = 'block'; }
-  else { logoAr.style.display = 'none'; logoEn.style.display = 'block'; }
+  applyLogoVisibility();
 
   document.getElementById('tagline-line1').textContent = c.tagline[0];
   document.getElementById('tagline-line2').textContent = c.tagline[1];
@@ -1865,6 +1940,7 @@ async function requestCancelAppointment() {
 document.addEventListener('DOMContentLoaded', () => {
   // Core UI comes up immediately with default copy — the chat must be fully
   // usable even if the network is slow, offline, or a backend call hangs.
+  applyBrandConfig(null); // fills title/footer/wordmark/header/chips/etc. with defaults; real config overwrites these once initHome()'s fetch resolves
   initSidebarImage();
   renderUI();
   addMsg('ai', COPY[lang].welcome);

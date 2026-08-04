@@ -555,11 +555,18 @@ def _public_config_view(config: dict) -> dict:
 
 @app.get("/api/landing-config")
 async def get_landing_config():
-    """Public endpoint to fetch landing page configuration (welcome text, nav links, etc.)"""
+    """Public endpoint to fetch landing page configuration (welcome text, nav
+    links, brand strings, etc.). hasLogoEn/hasLogoAr are computed live from
+    what's actually on disk (not a stored flag that could drift out of
+    sync) so the front end knows, without guessing off an <img> load
+    error, whether to render the logo image or the wordmark-text fallback
+    — exactly one of the two is ever shown."""
     config = storage.load_config()
     return {
         "landing": config.get("landing", {}),
         "booking": config.get("booking", {}),
+        "hasLogoEn": (IMAGES_DIR / "logo_en.png").is_file(),
+        "hasLogoAr": (IMAGES_DIR / "logo_ar.png").is_file(),
     }
 
 
@@ -591,10 +598,18 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
     if body.landing is not None:
         landing = config.get("landing", {})
         for key, value in body.landing.items():
-            if key in ["welcomeText-en", "welcomeText-ar", "tagline-en", "tagline-ar"]:
+            if key in [
+                "welcomeText-en", "welcomeText-ar", "tagline-en", "tagline-ar",
+                "brandName-en", "brandName-ar", "siteTitle", "metaDescription",
+                "footerText-en", "footerText-ar", "chatHeader-en", "chatHeader-ar",
+                "chatGreeting-en", "chatGreeting-ar",
+                "sidebarImageAlt-en", "sidebarImageAlt-ar",
+            ]:
                 landing[key] = str(value)[:500]
             elif key in ["ourWorkUrl", "contactUrl"]:
                 landing[key] = _validate_landing_url(str(value)[:2000])
+            elif key in ["chatChips-en", "chatChips-ar"]:
+                landing[key] = [str(c)[:200] for c in value][:6]
         config["landing"] = landing
     
     # Booking prompts config

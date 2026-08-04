@@ -272,6 +272,10 @@
         Persona & Files
       </a>
       <div class="sb-section">Content</div>
+      <a class="sb-item" data-p="branding" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        Branding & Copy
+      </a>
       <a class="sb-item" data-p="chat" onclick="go(this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Chat Knowledge
@@ -577,6 +581,86 @@
         </div>
       </div>
 
+      <!-- BRANDING & COPY -->
+      <div class="panel" id="p-branding">
+        <div class="ph"><h1>Branding & Copy</h1><p>Every brand-facing string on the site — name, page title, footer, chat wording — lives here. Nothing about your brand is hardcoded in the site's code.</p></div>
+
+        <div class="card">
+          <div class="card-lbl">Brand Identity</div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Brand name <span class="badge ben">EN</span></label><input type="text" class="finput" id="brandName-en" placeholder="Perennia"></div>
+            <div class="frow"><label class="flabel">Brand name <span class="badge bar">AR</span></label><input type="text" class="finput" id="brandName-ar" dir="rtl" placeholder="بيرينيا"></div>
+          </div>
+          <div class="frow"><label class="flabel">Browser tab title</label><input type="text" class="finput" id="siteTitle" placeholder="PERENNIA | بيرينيا"></div>
+          <div class="frow"><label class="flabel">Meta description (SEO)</label><input type="text" class="finput" id="metaDescription" placeholder="Perennia — AI-powered technology and innovation."></div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Footer text <span class="badge ben">EN</span></label><input type="text" class="finput" id="footerText-en" placeholder="© 2026 PERENNIA"></div>
+            <div class="frow"><label class="flabel">Footer text <span class="badge bar">AR</span></label><input type="text" class="finput" id="footerText-ar" dir="rtl" placeholder="© 2026 بيرينيا"></div>
+          </div>
+          <p class="fhint">The wordmark shown when no logo image is uploaded (see Logo Upload) always renders this brand name — never hardcoded stylized text.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Home Screen</div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Welcome text <span class="badge ben">EN</span></label><input type="text" class="finput" id="welcomeText-en" placeholder="Welcome to Perennia"></div>
+            <div class="frow"><label class="flabel">Welcome text <span class="badge bar">AR</span></label><input type="text" class="finput" id="welcomeText-ar" dir="rtl" placeholder="مرحبا بك في بيرينيا"></div>
+          </div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Tagline <span class="badge ben">EN</span></label><input type="text" class="finput" id="tagline-en" placeholder="Visit our V-Lounge for more"></div>
+            <div class="frow"><label class="flabel">Tagline <span class="badge bar">AR</span></label><input type="text" class="finput" id="tagline-ar" dir="rtl" placeholder="زر V-Lounge الخاص بنا لمزيد من المعلومات"></div>
+          </div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">"Our Work" link (optional)</label><input type="text" class="finput" id="ourWorkUrl" placeholder="https:// or /work"></div>
+            <div class="frow"><label class="flabel">"Contact Us" link (optional)</label><input type="text" class="finput" id="contactUrl" placeholder="https:// or /contact"></div>
+          </div>
+          <p class="fhint">Leave a link blank to hide that nav button on the home screen entirely.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Chat Assistant</div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Header wording (after brand name) <span class="badge ben">EN</span></label><input type="text" class="finput" id="chatHeader-en" placeholder="'s AI Assistant — here to help"></div>
+            <div class="frow"><label class="flabel">Header wording <span class="badge bar">AR</span></label><input type="text" class="finput" id="chatHeader-ar" dir="rtl" placeholder=" الذكي — هنا لمساعدتك"></div>
+          </div>
+          <div class="frow"><label class="flabel">Greeting message <span class="badge ben">EN</span></label><textarea class="finput" id="chatGreeting-en" rows="2" placeholder="Hello! I'm {brand}'s AI assistant…"></textarea></div>
+          <div class="frow"><label class="flabel">Greeting message <span class="badge bar">AR</span></label><textarea class="finput" id="chatGreeting-ar" dir="rtl" rows="2" placeholder="مرحباً! أنا المساعد الذكي لـ{brand}…"></textarea></div>
+          <p class="fhint">Use <code>{brand}</code> anywhere you want the brand name inserted automatically.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Suggested Question Chips</div>
+          <p class="fhint" style="margin-top:0">Shown as tap-to-ask suggestions when the chat opens. Up to 4 per language.</p>
+          <div class="twin">
+            <div>
+              <div class="frow"><label class="flabel">Chip 1 <span class="badge ben">EN</span></label><input type="text" class="finput" id="chatChips-en-0"></div>
+              <div class="frow"><label class="flabel">Chip 2 <span class="badge ben">EN</span></label><input type="text" class="finput" id="chatChips-en-1"></div>
+              <div class="frow"><label class="flabel">Chip 3 <span class="badge ben">EN</span></label><input type="text" class="finput" id="chatChips-en-2"></div>
+              <div class="frow"><label class="flabel">Chip 4 <span class="badge ben">EN</span></label><input type="text" class="finput" id="chatChips-en-3"></div>
+            </div>
+            <div>
+              <div class="frow"><label class="flabel">Chip 1 <span class="badge bar">AR</span></label><input type="text" class="finput" id="chatChips-ar-0" dir="rtl"></div>
+              <div class="frow"><label class="flabel">Chip 2 <span class="badge bar">AR</span></label><input type="text" class="finput" id="chatChips-ar-1" dir="rtl"></div>
+              <div class="frow"><label class="flabel">Chip 3 <span class="badge bar">AR</span></label><input type="text" class="finput" id="chatChips-ar-2" dir="rtl"></div>
+              <div class="frow"><label class="flabel">Chip 4 <span class="badge bar">AR</span></label><input type="text" class="finput" id="chatChips-ar-3" dir="rtl"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Sidebar Image</div>
+          <div class="twin">
+            <div class="frow"><label class="flabel">Alt text <span class="badge ben">EN</span></label><input type="text" class="finput" id="sidebarImageAlt-en" placeholder="Perennia Solution"></div>
+            <div class="frow"><label class="flabel">Alt text <span class="badge bar">AR</span></label><input type="text" class="finput" id="sidebarImageAlt-ar" dir="rtl" placeholder="حل بيرينيا"></div>
+          </div>
+        </div>
+
+        <button class="btn-save" onclick="saveBranding()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Branding & Copy
+        </button>
+      </div>
+
       <!-- CONTACT -->
       <div class="panel" id="p-contact">
         <div class="ph"><h1>Contact Details</h1><p>Shared with visitors who ask how to reach Perennia.</p></div>
@@ -732,7 +816,7 @@ async function adminFetch(url, options = {}) {
 document.getElementById('lp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 // ── Navigation ────────────────────────────────────
-const TITLES = { dash:'Dashboard', ai:'Provider & Model', assistant:'Persona & Files', chat:'Chat Knowledge', contact:'Contact Details', logo:'Logo Upload', appt:'Appointments' };
+const TITLES = { dash:'Dashboard', ai:'Provider & Model', assistant:'Persona & Files', branding:'Branding & Copy', chat:'Chat Knowledge', contact:'Contact Details', logo:'Logo Upload', appt:'Appointments' };
 
 function go(el) {
   event.preventDefault();
@@ -1095,6 +1179,54 @@ async function deleteKbFile(id) {
   loadKbList();
 }
 
+// ── Branding & Copy ─────────────────────────────────
+const LANDING_SCALAR_DEFAULTS = {
+  'brandName-en': 'Perennia', 'brandName-ar': 'بيرينيا',
+  'siteTitle': 'PERENNIA | بيرينيا',
+  'metaDescription': 'Perennia — AI-powered technology and innovation.',
+  'footerText-en': '© 2026 PERENNIA', 'footerText-ar': '© 2026 بيرينيا',
+  'welcomeText-en': 'Welcome to Perennia', 'welcomeText-ar': 'مرحبا بك في بيرينيا',
+  'tagline-en': 'Visit our V-Lounge for more', 'tagline-ar': 'زر V-Lounge الخاص بنا لمزيد من المعلومات',
+  'ourWorkUrl': '', 'contactUrl': '',
+  'chatHeader-en': "'s AI Assistant — here to help", 'chatHeader-ar': ' الذكي — هنا لمساعدتك',
+  'chatGreeting-en': "Hello! I'm {brand}'s AI assistant. Ask me anything about our company — our solutions, products, industries we serve, or what makes us different.",
+  'chatGreeting-ar': 'مرحباً! أنا المساعد الذكي لـ{brand}. اسألني أي شيء عن شركتنا — حلولنا، منتجاتنا، الصناعات التي نخدمها، أو ما يميزنا.',
+  'sidebarImageAlt-en': 'Perennia Solution', 'sidebarImageAlt-ar': 'حل بيرينيا',
+};
+const LANDING_CHIP_DEFAULTS = {
+  'chatChips-en': ['What does {brand} do?', 'Tell me about your products', 'Which industries do you serve?', 'What makes you different?'],
+  'chatChips-ar': ['ماذا تفعل {brand}؟', 'أخبرني عن منتجاتكم', 'ما هي الصناعات التي تخدمونها؟', 'ما الذي يميزكم؟'],
+};
+
+function loadBranding() {
+  const saved = (serverConfig && serverConfig.landing) || {};
+  Object.entries(LANDING_SCALAR_DEFAULTS).forEach(([id, def]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = id in saved ? saved[id] : def;
+  });
+  Object.entries(LANDING_CHIP_DEFAULTS).forEach(([key, def]) => {
+    const chips = saved[key] || def;
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById(`${key}-${i}`);
+      if (el) el.value = chips[i] || '';
+    }
+  });
+}
+
+async function saveBranding() {
+  const data = {};
+  Object.keys(LANDING_SCALAR_DEFAULTS).forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+  Object.keys(LANDING_CHIP_DEFAULTS).forEach(key => {
+    data[key] = [0, 1, 2, 3].map(i => document.getElementById(`${key}-${i}`)?.value || '').filter(v => v.trim() !== '');
+  });
+  try {
+    await patchConfig({ landing: data });
+    toast('✔ Branding & copy saved', 'ok');
+  } catch (e) {
+    toast(`✗ ${e.message}`, 'err');
+  }
+}
+
 // ── Contact ───────────────────────────────────────
 const CT_DEFAULTS = { 'ct-email':'info@perennia.com', 'ct-phone':'+965 0000 0000', 'ct-addr-en':'Kuwait', 'ct-addr-ar':'الكويت' };
 
@@ -1301,6 +1433,7 @@ async function init() {
   loadTone();
   loadAvatarPreview();
   loadKbList();
+  loadBranding();
   loadContact();
   loadLogos();
   loadAnalytics();

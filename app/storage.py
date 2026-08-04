@@ -50,6 +50,33 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "tagline-ar": "زر V-Lounge الخاص بنا لمزيد من المعلومات",
         "ourWorkUrl": "",
         "contactUrl": "",
+        # ── Brand identity (drives <title>, wordmark fallback, footer,
+        #    chat header/greeting) — every visible brand string is admin-
+        #    editable here instead of hardcoded in the page. ──
+        "brandName-en": "Perennia",
+        "brandName-ar": "بيرينيا",
+        "siteTitle": "PERENNIA | بيرينيا",
+        "metaDescription": "Perennia — AI-powered technology and innovation.",
+        "footerText-en": "© 2026 PERENNIA",
+        "footerText-ar": "© 2026 بيرينيا",
+        "chatHeader-en": "'s AI Assistant — here to help",
+        "chatHeader-ar": " الذكي — هنا لمساعدتك",
+        "chatGreeting-en": "Hello! I'm {brand}'s AI assistant. Ask me anything about our company — our solutions, products, industries we serve, or what makes us different.",
+        "chatGreeting-ar": "مرحباً! أنا المساعد الذكي لـ{brand}. اسألني أي شيء عن شركتنا — حلولنا، منتجاتنا، الصناعات التي نخدمها، أو ما يميزنا.",
+        "chatChips-en": [
+            "What does {brand} do?",
+            "Tell me about your products",
+            "Which industries do you serve?",
+            "What makes you different?",
+        ],
+        "chatChips-ar": [
+            "ماذا تفعل {brand}؟",
+            "أخبرني عن منتجاتكم",
+            "ما هي الصناعات التي تخدمونها؟",
+            "ما الذي يميزكم؟",
+        ],
+        "sidebarImageAlt-en": "Perennia Solution",
+        "sidebarImageAlt-ar": "حل بيرينيا",
     },
     "booking": {
         "promptsEn": [
