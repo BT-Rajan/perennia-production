@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PERENNIA | بيرينيا</title>
+<meta name="description" content="Perennia — AI-powered technology and innovation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=Noto+Kufi+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+
+:root {
+  /* ── Exact colors sampled from official Perennia logos ── */
+  --navy-1: #000e28;
+  --navy-2: #001030;
+  --navy-3: #041a3e;
+  --navy-4: #05214b;
+  --navy-5: #0a2d5e;
+  --navy-6: #123870;
+  --blue-mid: #1e4d8c;
+  --blue-light: #2d6aad;
+  --white-soft: #e8eef8;
+  --white-pure: #ffffff;
+  --gold: #d0a030;
+  --gold-dim: rgba(208,160,48,0.16);
+  --gold-border: rgba(208,160,48,0.30);
+  --glass: rgba(255,255,255,0.055);
+  --glass-border: rgba(255,255,255,0.10);
+  --muted: rgba(255,255,255,0.50);
+  --font-en-display: 'Cormorant Garamond', Georgia, serif;
+  --font-en: 'Inter', system-ui, sans-serif;
+  --font-ar: 'Noto Kufi Arabic', 'Arial Unicode MS', sans-serif;
+}
+
+body {
+  min-height: 100%;
+  font-family: var(--font-en);
+  /* Multi-stop gradient: deep navy → mid-blue → lighter blue → white-ish — the "rich blue" base of the whole app */
+  background:
+    radial-gradient(ellipse 100% 55% at 50% -5%, rgba(208,160,48,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 70% at 15% 85%, rgba(4,26,62,0.95) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 70% at 88% 15%, rgba(18,56,112,0.35) 0%, transparent 50%),
+    linear-gradient(160deg,
+      var(--navy-1) 0%,
+      var(--navy-2) 15%,
+      var(--navy-3) 32%,
+      var(--navy-4) 50%,
+      var(--navy-5) 66%,
+      var(--navy-6) 78%,
+      #1e4d8c 88%,
+      #3a6eb8 100%
+    );
+  background-attachment: fixed;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ── Mesh overlay for depth ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, black 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Top bar (shared look for lang / nav pills) ── */
+.top-bar {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  gap: 8px;
+  transition: right 0.3s, left 0.3s;
+}
+[dir="rtl"] .top-bar { right: auto; left: 20px; }
+@media (max-width: 640px) {
+  .top-bar { top: 12px; right: 12px; }
+  [dir="rtl"] .top-bar { left: 12px; }
+}
+
+.icon-btn, .lang-btn, .nav-pill {
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+  font-family: var(--font-en);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover, .lang-btn:hover, .nav-pill:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+
+.icon-btn { font-size: 14px; width: 34px; height: 34px; border-radius: 100px; }
+.lang-btn, .nav-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 7px 18px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+/* ── Wordmark fallback (shown if the admin hasn't uploaded a logo yet) ── */
+.wordmark {
+  display: none;
+  font-family: var(--font-en-display);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #fff;
+}
+.wordmark .g { color: var(--gold); }
+[dir="rtl"] .wordmark { font-family: var(--font-ar); letter-spacing: 0; }
+
+/* ── LOGO ── */
+.logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-wrap::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px; height: 100px;
+  background: radial-gradient(ellipse, rgba(208,160,48,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.logo-img {
+  height: 60px;
+  width: auto;
+  max-width: 320px;
+  display: block;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 2px 24px rgba(208,160,48,0.20));
+  transition: filter 0.4s ease;
+}
+.logo-img:hover { filter: drop-shadow(0 2px 36px rgba(208,160,48,0.38)); }
+
+/* ── Tagline (shared style) ── */
+.tagline-wrap { text-align: center; width: 100%; }
+.tagline-main {
+  font-family: var(--font-en-display);
+  font-size: clamp(1.55rem, 3.2vw, 2.3rem);
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+[dir="rtl"] .tagline-main { font-family: var(--font-ar); font-weight: 500; }
+.tagline-main .gold { color: var(--gold); }
+
+.tagline-divider {
+  width: 44px; height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 12px auto;
+}
+
+.tagline-sub {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.42);
+}
+[dir="rtl"] .tagline-sub { letter-spacing: 0; }
+
+/* ══════════════════════════════════════════════════════════
+   HOME / LANDING PAGE
+══════════════════════════════════════════════════════════ */
+#home-page {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.4s ease;
+}
+body.chat-active #home-page { display: none; }
+
+.home-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 100px 24px 60px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.home-logo-wrap .logo-img { height: 100px; }
+.home-logo-wrap .wordmark { font-size: 42px; }
+
+.home-welcome {
+  font-family: var(--font-en-display);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+[dir="rtl"] .home-welcome { font-family: var(--font-ar); font-weight: 500; }
+
+.home-tagline {
+  font-size: 15px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.6;
+  max-width: 440px;
+}
+
+/* ── Glass "start chat" pill, pulsing gently ── */
+.home-cta {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 14px 30px;
+  border-radius: 100px;
+  border: 1px solid var(--gold-border);
+  background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(107,170,232,0.07));
+  backdrop-filter: blur(20px);
+  color: var(--gold);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
+  animation: ctaPulse 2.6s ease-in-out infinite;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.home-cta:hover { transform: translateY(-2px); background: var(--gold-dim); }
+@keyframes ctaPulse {
+  0%, 100% { box-shadow: 0 8px 30px rgba(208,160,48,0.10), inset 0 1px 0 rgba(255,255,255,0.12); }
+  50% { box-shadow: 0 8px 34px rgba(208,160,48,0.32), inset 0 1px 0 rgba(255,255,255,0.18); }
+}
+
+/* ── Auto-transition progress bar under the CTA ── */
+.progress-track {
+  width: 160px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold), #f0c766);
+}
+.progress-fill.running { transition: width 7s linear; width: 100%; }
+
+#home-footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 18px;
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 640px) {
+  .home-center { padding: 90px 20px 40px; gap: 28px; }
+  .home-logo-wrap .logo-img { height: 72px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CHAT PAGE (fixed overlay above the home page)
+   Full-screen, chat window centered with FAQ + image panels
+   flanking it — a real "app" layout, not a scrolling page.
+══════════════════════════════════════════════════════════ */
+#chat-page {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  flex-direction: column;
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  overflow-y: auto;
+}
+#chat-page.active { display: flex; opacity: 1; transform: scale(1); }
+
+.chat-page-logo { position: fixed; top: 20px; left: 20px; z-index: 150; }
+[dir="rtl"] .chat-page-logo { left: auto; right: 20px; }
+.chat-page-logo .logo-img { height: 42px; }
+@media (max-width: 640px) {
+  .chat-page-logo { top: 12px; left: 12px; }
+  [dir="rtl"] .chat-page-logo { left: auto; right: 12px; }
+  .chat-page-logo .logo-img { height: 34px; }
+}
+
+.back-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 150;
+}
+[dir="rtl"] .back-btn { left: auto; right: 20px; }
+
+/* ── Main layout: everything centered as one block in the viewport ── */
+main.chat-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 88px 24px 24px;
+  overflow-y: auto;
+  gap: 22px;
+}
+
+.inner { width: 100%; max-width: 1360px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+
+/* ── Content grid: FAQ | chat | images, all stretched to the same height, centered as a unit ── */
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 230px minmax(320px, 740px) 280px;
+  gap: 26px;
+  width: 100%;
+  justify-content: center;
+  height: min(70vh, 720px);
+  min-height: 420px;
+}
+[dir="rtl"] .content-wrapper { direction: rtl; }
+
+/* ── Image sidebar — cycles between the hero image and short philosophy
+   quotes, whichever is available, in the same glass/gold language as the
+   rest of the app ── */
+.image-sidebar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+.slide-frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,0.25));
+  transition: filter 0.3s ease;
+}
+.slide-frame:hover { filter: drop-shadow(0 12px 32px rgba(0,0,0,0.35)); }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.7s ease;
+}
+.slide.active { opacity: 1; visibility: visible; }
+
+.slide-img img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+.slide-img .img-caption {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 20px 18px 16px;
+  background: linear-gradient(0deg, rgba(0,10,30,0.78) 0%, rgba(0,10,30,0.25) 60%, transparent 100%);
+  font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.88); text-align: center;
+}
+
+.slide-text {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  padding: 30px 24px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.09) 0%, rgba(107,170,232,0.07) 45%, rgba(4,26,62,0.55) 100%), var(--navy-2);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.quote-mark {
+  font-family: var(--font-en-display); font-size: 58px; line-height: 1;
+  color: var(--gold); opacity: 0.5; margin-bottom: 2px;
+}
+.quote-text {
+  font-family: var(--font-en-display); font-style: italic; font-weight: 500;
+  font-size: 19px; line-height: 1.5; color: rgba(255,255,255,0.94); max-width: 240px;
+}
+[dir="rtl"] .quote-text { font-family: var(--font-ar); font-style: normal; }
+.quote-label {
+  margin-top: 16px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--gold); opacity: 0.85;
+}
+[dir="rtl"] .quote-label { letter-spacing: 0; }
+
+.slide-dots { display: flex; justify-content: center; gap: 6px; flex-shrink: 0; }
+.slide-dot {
+  width: 6px; height: 6px; border-radius: 50%; border: none; padding: 0;
+  background: rgba(255,255,255,0.22); transition: all 0.25s ease; cursor: pointer;
+}
+.slide-dot:hover { background: rgba(255,255,255,0.4); }
+.slide-dot.active { background: var(--gold); width: 18px; border-radius: 3px; box-shadow: 0 0 8px rgba(208,160,48,0.4); }
+
+@media (max-width: 1180px) {
+  .content-wrapper { grid-template-columns: 1fr; height: auto; }
+  .image-sidebar { display: none; }
+}
+
+/* ── FAQ / Quick Questions sidebar — normal grid column, never overlaps anything ── */
+.faq-sidebar {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(107,170,232,0.05) 50%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 0 0 1px rgba(201,162,39,0.06), 0 8px 28px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.10);
+  backdrop-filter: blur(24px);
+  padding: 18px 15px;
+  overflow-y: auto;
+}
+
+.faq-title { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; padding: 0 2px; flex-shrink: 0; }
+[dir="rtl"] .faq-title { letter-spacing: 0; text-align: right; }
+
+.faq-list { display: flex; flex-direction: column; gap: 9px; }
+.faq-item {
+  display: block; width: 100%; text-align: left;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 10px; color: rgba(255,255,255,0.75);
+  font-family: inherit; font-size: 13.5px; line-height: 1.55; padding: 10px 12px;
+  cursor: pointer; transition: all 0.18s ease; flex-shrink: 0;
+}
+[dir="rtl"] .faq-item { text-align: right; }
+[dir="rtl"] .faq-item, [dir="rtl"] .faq-item * { font-family: var(--font-ar); }
+.faq-item:hover { background: var(--gold-dim); border-color: var(--gold-border); color: #fff; }
+.faq-item strong { color: var(--gold); font-weight: 600; }
+.faq-item:hover strong { color: var(--gold); }
+.faq-item:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 1180px) {
+  .faq-sidebar { width: 100%; height: auto; max-height: none; order: -1; }
+  .faq-list { flex-direction: row; flex-wrap: wrap; }
+  .faq-item { width: auto; flex: 1 1 auto; }
+}
+
+/* ── Chat shell — the centerpiece, full height of the content grid ── */
+.chat-shell {
+  min-width: 0;
+  height: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(107,170,232,0.06) 50%, rgba(255,255,255,0.04) 100%);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 0 0 1px rgba(201,162,39,0.07), 0 8px 32px rgba(0,0,0,0.30), 0 32px 80px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.12);
+  backdrop-filter: blur(24px);
+}
+
+/* Chat header */
+.chat-header {
+  display: flex; align-items: center; gap: 11px; padding: 16px 22px; flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(107,170,232,0.05), rgba(255,255,255,0.03));
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 10px rgba(74,222,128,0.6); flex-shrink: 0; animation: pulse 2.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+.chat-header-text { font-size: 14.5px; color: rgba(255,255,255,0.55); font-weight: 400; letter-spacing: 0.01em; }
+.chat-header-text b { color: var(--gold); font-weight: 600; }
+
+/* Messages */
+.chat-messages {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 24px 22px;
+  display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.chat-messages::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(201,162,39,0.35); border-radius: 3px; }
+.chat-messages::-webkit-scrollbar-thumb:hover { background: rgba(201,162,39,0.55); }
+
+.msg { display: flex; gap: 12px; align-items: flex-start; animation: msgIn 0.28s ease both; flex-shrink: 0; }
+@keyframes msgIn { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+.msg.user { flex-direction: row-reverse; }
+[dir="rtl"] .msg.ai  { flex-direction: row-reverse; }
+[dir="rtl"] .msg.user { flex-direction: row; }
+
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; font-weight: 700; margin-top: 2px; }
+.msg.ai .avatar { background: linear-gradient(135deg, var(--navy-3), var(--navy-5)); border: 1px solid var(--gold-border); color: var(--gold); font-family: var(--font-en-display); font-size: 18px; box-shadow: 0 0 14px rgba(208,160,48,0.18); }
+.msg.user .avatar { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); font-size: 12px; }
+
+.bubble { max-width: 82%; padding: 13px 17px; border-radius: 16px; font-size: 16px; line-height: 1.72; }
+.msg.ai .bubble { background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(107,170,232,0.07)); border: 1px solid rgba(255,255,255,0.09); color: rgba(255,255,255,0.92); border-bottom-left-radius: 4px; }
+[dir="rtl"] .msg.ai .bubble { border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
+.msg.user .bubble { background: linear-gradient(135deg, var(--gold), #b8881a); color: #fff; font-weight: 500; border-bottom-right-radius: 4px; }
+[dir="rtl"] .msg.user .bubble { border-bottom-right-radius: 16px; border-bottom-left-radius: 4px; }
+
+/* Typing dots */
+.typing-bubble { display: flex; gap: 5px; padding: 14px 17px; background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(107,170,232,0.07)); border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; border-bottom-left-radius: 4px; }
+[dir="rtl"] .typing-bubble { border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
+.typing-bubble span { width: 6px; height: 6px; background: rgba(201,162,39,0.65); border-radius: 50%; animation: bounce 1.1s ease-in-out infinite; }
+.typing-bubble span:nth-child(2) { animation-delay: 0.18s; }
+.typing-bubble span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.45} 30%{transform:translateY(-5px);opacity:1} }
+
+/* Chips */
+.chips { padding: 0 20px 14px; display: flex; gap: 7px; flex-wrap: wrap; flex-shrink: 0; }
+.chip {
+  font-size: 12.5px; padding: 6px 14px; background: transparent;
+  border: 1px solid rgba(201,162,39,0.28); border-radius: 100px; color: rgba(255,255,255,0.55);
+  cursor: pointer; font-family: inherit; transition: all 0.18s ease; white-space: nowrap;
+}
+.chip:hover { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+
+/* Input area */
+.chat-input-area { display: flex; gap: 10px; align-items: flex-end; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.07); background: linear-gradient(90deg, rgba(0,0,0,0.10), rgba(15,32,64,0.15)); flex-shrink: 0; }
+
+.chat-input {
+  flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 10px; color: #fff; font-family: inherit; font-size: 16px; line-height: 1.5;
+  padding: 11px 15px; resize: none; min-height: 46px; max-height: 130px; outline: none; transition: border-color 0.2s;
+}
+[dir="rtl"] .chat-input { text-align: right; font-family: var(--font-ar); }
+.chat-input::placeholder { color: rgba(255,255,255,0.28); }
+.chat-input:focus { border-color: rgba(201,162,39,0.45); }
+
+.send-btn {
+  width: 46px; height: 46px; flex-shrink: 0; border-radius: 10px; background: var(--gold);
+  border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+}
+.send-btn:hover:not(:disabled) { background: #b8881a; transform: scale(1.05); }
+.send-btn:disabled { background: rgba(201,162,39,0.25); cursor: not-allowed; transform: none; }
+.send-btn svg { width: 18px; height: 18px; }
+
+/* ── Chat footer ── */
+.chat-footer {
+  position: relative; z-index: 1; text-align: center; padding: 6px 18px 14px;
+  font-size: 10.5px; color: rgba(255,255,255,0.2); letter-spacing: 0.06em; flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1180px) {
+  main.chat-main { padding: 84px 20px 20px; }
+  .content-wrapper { gap: 16px; }
+  .chat-shell { height: min(74vh, 680px); }
+}
+@media (max-width: 640px) {
+  main.chat-main { padding: 68px 12px 12px; }
+  .inner { gap: 14px; }
+  .tagline-wrap { margin-top: 0 !important; }
+  .content-wrapper { gap: 12px; height: auto; }
+  .chat-shell { height: calc(100vh - 150px); min-height: 380px; }
+  .faq-list { gap: 6px; }
+  .faq-item { font-size: 12.5px; padding: 8px 10px; }
+  .bubble { font-size: 15px; max-width: 88%; }
+  .avatar { width: 30px; height: 30px; font-size: 13px; }
+}
+
+/* ── Appointment CTA button (inside chat bubbles) ── */
+.cta-row { margin-top: 10px; }
+.cta-btn {
+  font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 100px;
+  border: 1px solid var(--gold-border); background: var(--gold-dim); color: var(--gold);
+  cursor: pointer; font-family: inherit; transition: all 0.18s ease; display: inline-flex; align-items: center; gap: 6px;
+}
+.cta-btn:hover { background: var(--gold); color: #fff; }
+
+/* ── Talk to Us — lives inside the chat shell, not a separate overlay ── */
+.chat-conversation-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.chat-conversation {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-panel {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, rgba(255,255,255,0.09) 0%, rgba(107,170,232,0.07) 45%, rgba(4,26,62,0.55) 100%), var(--navy-2);
+  backdrop-filter: blur(20px);
+  padding: 22px 24px 20px;
+  overflow-y: auto;
+  opacity: 0; transform: translateY(14px); visibility: hidden; pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.booking-panel.open { opacity: 1; transform: translateY(0); visibility: visible; pointer-events: auto; }
+
+.booking-panel::before {
+  content: '';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 140px; height: 100px;
+  background: radial-gradient(ellipse, rgba(208,160,48,0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.booking-close {
+  position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 100px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13);
+  color: rgba(255,255,255,0.55); font-size: 13px; cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;
+  z-index: 1;
+}
+.booking-close:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+[dir="rtl"] .booking-close { right: auto; left: 16px; }
+
+.booking-badge {
+  width: 44px; height: 44px; border-radius: 50%; margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--navy-3), var(--navy-5));
+  border: 1px solid var(--gold-border); color: var(--gold);
+  display: flex; align-items: center; justify-content: center; font-size: 19px;
+  box-shadow: 0 0 16px rgba(208,160,48,0.20);
+}
+
+.booking-panel h3 { font-family: var(--font-en-display); font-size: 23px; color: #fff; font-weight: 600; margin-bottom: 5px; letter-spacing: -0.01em; }
+[dir="rtl"] .booking-panel h3 { font-family: var(--font-ar); font-weight: 500; }
+.booking-panel > p { font-size: 12.5px; color: rgba(255,255,255,0.52); margin-bottom: 6px; line-height: 1.55; }
+
+.booking-head-divider {
+  width: 40px; height: 1.5px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  margin: 4px 0 16px;
+}
+[dir="rtl"] .booking-head-divider { background: linear-gradient(90deg, transparent, var(--gold)); margin-left: auto; }
+
+/* Tabs: New Appointment / Manage Booking */
+.bk-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-shrink: 0; }
+.bk-tab {
+  flex: 1; padding: 9px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.11); color: rgba(255,255,255,0.55);
+  cursor: pointer; font-family: inherit; transition: all 0.18s ease; text-align: center;
+}
+.bk-tab:hover { color: rgba(255,255,255,0.8); }
+.bk-tab.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+
+.bk-field { margin-bottom: 14px; }
+.bk-field label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.10em; color: var(--gold); margin-bottom: 6px; text-transform: uppercase; opacity: 0.85; }
+[dir="rtl"] .bk-field label { letter-spacing: 0; }
+.bk-field input, .bk-field textarea {
+  width: 100%; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 10px; color: #fff; font-family: inherit; font-size: 14.5px; padding: 10px 13px; outline: none; resize: vertical;
+  transition: border-color 0.2s, background 0.2s;
+}
+.bk-field input::placeholder, .bk-field textarea::placeholder { color: rgba(255,255,255,0.28); }
+.bk-field input:focus, .bk-field textarea:focus { border-color: rgba(201,162,39,0.55); background: rgba(255,255,255,0.08); }
+.bk-field input[type="date"] { color-scheme: dark; }
+
+.bk-slots { display: flex; flex-wrap: wrap; gap: 7px; max-height: 150px; overflow-y: auto; padding: 2px; }
+.bk-slots-empty { font-size: 12.5px; color: rgba(255,255,255,0.38); padding: 6px 2px; font-style: italic; font-family: var(--font-en-display); }
+.bk-slot {
+  font-size: 12.5px; padding: 7px 13px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.13);
+  background: rgba(255,255,255,0.045); color: rgba(255,255,255,0.75); cursor: pointer; font-family: inherit;
+  transition: all 0.18s ease;
+}
+.bk-slot:hover { border-color: var(--gold-border); color: var(--gold); background: var(--gold-dim); }
+.bk-slot.picked { background: var(--gold); border-color: var(--gold); color: #1a1305; font-weight: 700; box-shadow: 0 0 14px rgba(208,160,48,0.35); }
+
+.bk-err { font-size: 12px; color: #e0785f; min-height: 16px; margin-top: 2px; }
+
+/* Appointment summary card + notice banner (Manage Booking) */
+.bk-appt-summary {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.11); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 12px; font-size: 13.5px; line-height: 1.7; color: rgba(255,255,255,0.85);
+}
+.bk-appt-summary b { color: var(--gold); }
+.bk-appt-summary .appt-id { font-family: var(--font-en-display); font-size: 16px; color: #fff; font-weight: 600; }
+.bk-appt-summary .appt-status-cancelled { color: #e0785f; font-weight: 600; }
+
+.bk-notice {
+  font-size: 12.5px; line-height: 1.55; padding: 10px 13px; border-radius: 10px; margin-bottom: 12px;
+  background: rgba(224,120,95,0.12); border: 1px solid rgba(224,120,95,0.30); color: #f0a68f;
+}
+
+.booking-foot { display: flex; gap: 10px; margin-top: 10px; }
+.btn-2 {
+  flex: 1; padding: 11px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
+  background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.14); color: rgba(255,255,255,0.7);
+  cursor: pointer; font-family: inherit; transition: all 0.18s ease;
+}
+.btn-2:hover { background: rgba(255,255,255,0.09); }
+.btn-2:disabled { opacity: 0.45; cursor: not-allowed; }
+.send-btn-wide {
+  flex: 1.4; padding: 11px; border-radius: 10px; font-size: 13.5px; font-weight: 700;
+  background: linear-gradient(135deg, var(--gold), #b8881a); border: none; color: #fff; cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 16px rgba(208,160,48,0.25); transition: all 0.18s ease;
+}
+.send-btn-wide:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(208,160,48,0.35); }
+.send-btn-wide:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.booking-success { text-align: center; padding: 20px 4px 4px; }
+.bk-success-icon {
+  width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 14px;
+  background: linear-gradient(135deg, var(--navy-3), var(--navy-5));
+  border: 1px solid var(--gold-border); color: var(--gold);
+  display: flex; align-items: center; justify-content: center; font-size: 21px;
+  box-shadow: 0 0 20px rgba(208,160,48,0.25);
+}
+#bk-success-msg { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.65; }
+#bk-success-msg strong { color: var(--gold); }
+
+@media (max-width: 480px) {
+  .booking-panel { padding: 18px 16px 16px; }
+  .booking-panel h3 { font-size: 20px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ─── HOME / LANDING PAGE ─── -->
+<div id="home-page">
+  <div class="top-bar">
+    <button class="nav-pill" id="our-work-link">Our Work</button>
+    <button class="nav-pill" id="contact-link">Contact Us</button>
+    <button class="lang-btn" id="home-lang-btn" onclick="toggleLang()">AR | عربي</button>
+  </div>
+
+  <div class="home-center" id="home-center">
+    <div class="logo-wrap home-logo-wrap">
+      <img class="logo-img" id="home-logo-en" src="static/images/logo_en.png" alt="Perennia"
+           onerror="this.style.display='none'; document.getElementById('home-wordmark-en').style.display='block';"
+           style="display:block;">
+      <span class="wordmark" id="home-wordmark-en">PEREN<span class="g">NIA</span></span>
+      <img class="logo-img" id="home-logo-ar" src="static/images/logo_ar.png" alt="بيرينيا"
+           onerror="this.style.display='none'; document.getElementById('home-wordmark-ar').style.display='block';"
+           style="display:none;">
+      <span class="wordmark" id="home-wordmark-ar" style="display:none;">بيرينيا</span>
+    </div>
+
+    <div class="tagline-wrap">
+      <div class="home-welcome" id="home-welcome-text">Welcome to Perennia</div>
+    </div>
+
+    <div class="home-tagline" id="home-tagline-text">Visit our V-Lounge for more</div>
+
+    <button class="home-cta" id="home-cta-btn">
+      <span id="home-hint-text">Tap to start chatting</span>
+    </button>
+    <div class="progress-track"><div class="progress-fill" id="home-progress"></div></div>
+  </div>
+
+  <footer id="home-footer">© 2024 PERENNIA · بيرينيا</footer>
+</div>
+
+<!-- ─── CHAT PAGE ─── -->
+<div class="chat-page-logo logo-wrap" id="chat-page-logo-wrap">
+  <img class="logo-img" id="logo-en" src="static/images/logo_en.png" alt="Perennia"
+       onerror="this.style.display='none'; document.getElementById('wordmark-en').style.display='block';"
+       style="display:block;">
+  <span class="wordmark" id="wordmark-en" style="display:none; font-size:20px;">PEREN<span class="g">NIA</span></span>
+  <img class="logo-img" id="logo-ar" src="static/images/logo_ar.png" alt="بيرينيا"
+       onerror="this.style.display='none'; document.getElementById('wordmark-ar').style.display='block';"
+       style="display:none;">
+  <span class="wordmark" id="wordmark-ar" style="display:none; font-size:20px;">بيرينيا</span>
+</div>
+
+<div id="chat-page">
+  <div class="top-bar">
+    <button class="chip" id="book-btn" onclick="openBooking()" style="white-space:nowrap">💬 <span id="book-btn-label">Talk to Us</span></button>
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()">AR | عربي</button>
+  </div>
+
+  <button class="icon-btn back-btn" id="back-btn" onclick="closeChat()" title="Back">←</button>
+
+  <main class="chat-main">
+    <div class="inner">
+
+      <div class="tagline-wrap">
+        <div class="tagline-main">
+          <span id="tagline-line1">Solving Today. </span><span class="gold" id="tagline-line2">Shaping Tomorrow.</span>
+        </div>
+        <div class="tagline-divider"></div>
+        <div class="tagline-sub" id="tagline-sub">AI-POWERED TECHNOLOGY &amp; INNOVATION</div>
+      </div>
+
+      <div class="content-wrapper">
+        <aside class="faq-sidebar">
+          <div class="faq-title" id="faq-title">Quick Questions</div>
+          <div class="faq-list" id="faq-list"></div>
+        </aside>
+
+        <div class="chat-shell">
+          <div class="chat-header">
+            <div class="status-dot"></div>
+            <p class="chat-header-text" id="chat-header"></p>
+          </div>
+
+          <div class="chat-conversation-wrap">
+            <div class="chat-conversation" id="chat-conversation">
+              <div class="chat-messages" id="messages"></div>
+              <div class="chips" id="chips"></div>
+              <div class="chat-input-area">
+                <textarea class="chat-input" id="input" rows="1"></textarea>
+                <button class="send-btn" id="send-btn" onclick="send()" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- ─── Talk to Us — lives inside the chat shell itself, synced with the
+                 conversation (same session, posts its result back into the transcript) ─── -->
+            <div class="booking-panel" id="booking-panel">
+              <button class="booking-close" id="booking-close-btn" onclick="closeBooking()">✕</button>
+
+              <div class="booking-badge">📅</div>
+              <h3 id="bk-title">Talk to Us</h3>
+              <p id="bk-sub">Pick a time that works for you — we'll confirm by email.</p>
+              <div class="booking-head-divider"></div>
+
+              <div class="bk-tabs">
+                <button class="bk-tab active" id="bk-tab-new" onclick="switchBkTab('new')">New Appointment</button>
+                <button class="bk-tab" id="bk-tab-manage" onclick="switchBkTab('manage')">Manage Booking</button>
+              </div>
+
+              <!-- New appointment -->
+              <div id="bk-new-view">
+                <div class="bk-field">
+                  <label id="bk-lbl-date">Date</label>
+                  <input type="date" id="bk-date" oninput="loadSlots()">
+                </div>
+                <div class="bk-field">
+                  <label id="bk-lbl-slot">Available times</label>
+                  <div class="bk-slots" id="bk-slots"><div class="bk-slots-empty" id="bk-slots-msg">Pick a date to see available times</div></div>
+                </div>
+                <div class="bk-field"><label id="bk-lbl-name">Name</label><input id="bk-name" type="text" maxlength="120" autocomplete="name"></div>
+                <div class="bk-field"><label id="bk-lbl-email">Email</label><input id="bk-email" type="email" autocomplete="email"></div>
+                <div class="bk-field"><label id="bk-lbl-phone">Phone (optional)</label><input id="bk-phone" type="tel" autocomplete="tel"></div>
+                <div class="bk-field"><label id="bk-lbl-service">What are you interested in? (optional)</label><input id="bk-service" type="text" maxlength="200"></div>
+                <div class="bk-field"><label id="bk-lbl-notes">Notes (optional)</label><textarea id="bk-notes" rows="2" maxlength="1000"></textarea></div>
+                <div class="bk-err" id="bk-err"></div>
+                <div class="booking-foot">
+                  <button class="btn-2" id="bk-cancel-btn" onclick="closeBooking()">Cancel</button>
+                  <button class="send-btn-wide" id="bk-submit-btn" onclick="submitBooking()">Confirm Booking</button>
+                </div>
+              </div>
+
+              <!-- Manage an existing appointment -->
+              <div id="bk-manage-view" style="display:none">
+                <div id="bk-lookup-form">
+                  <div class="bk-field"><label id="bk-lbl-lookup-id">Appointment ID</label><input id="bk-lookup-id" type="text" placeholder="PRN-XXXXXXXX" autocomplete="off"></div>
+                  <div class="bk-field"><label id="bk-lbl-lookup-email">Email used to book</label><input id="bk-lookup-email" type="email" autocomplete="email"></div>
+                  <div class="bk-err" id="bk-lookup-err"></div>
+                  <button class="send-btn-wide" id="bk-lookup-btn" onclick="lookupAppointment()" style="width:100%">Find My Appointment</button>
+                </div>
+
+                <div id="bk-manage-details" style="display:none">
+                  <div class="bk-appt-summary" id="bk-appt-summary"></div>
+                  <div class="bk-notice" id="bk-modify-notice" style="display:none"></div>
+
+                  <div class="booking-foot" id="bk-manage-actions">
+                    <button class="btn-2" id="bk-cancel-appt-btn" onclick="requestCancelAppointment()">Cancel Appointment</button>
+                    <button class="send-btn-wide" id="bk-reschedule-btn" onclick="showReschedulePanel()">Reschedule</button>
+                  </div>
+
+                  <div id="bk-reschedule-panel" style="display:none">
+                    <div class="bk-field">
+                      <label id="bk-lbl-re-date">New date</label>
+                      <input type="date" id="bk-re-date" oninput="loadRescheduleSlots()">
+                    </div>
+                    <div class="bk-field">
+                      <label id="bk-lbl-re-slot">Available times</label>
+                      <div class="bk-slots" id="bk-re-slots"><div class="bk-slots-empty" id="bk-re-slots-msg">Pick a date to see available times</div></div>
+                    </div>
+                    <div class="bk-err" id="bk-re-err"></div>
+                    <div class="booking-foot">
+                      <button class="btn-2" onclick="hideReschedulePanel()">Back</button>
+                      <button class="send-btn-wide" id="bk-re-submit-btn" onclick="submitReschedule()">Confirm New Time</button>
+                    </div>
+                  </div>
+
+                  <button class="btn-2" id="bk-manage-back-btn" onclick="resetManageView()" style="width:100%; margin-top:10px;">Look up a different appointment</button>
+                </div>
+              </div>
+
+              <div class="booking-success" id="bk-success" style="display:none">
+                <div class="bk-success-icon">✓</div>
+                <div id="bk-success-msg"></div>
+                <button class="btn-2" onclick="closeBooking()" style="margin-top:16px; width:100%;">Back to chat</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="image-sidebar" id="image-sidebar">
+          <div class="slide-frame" id="slide-frame">
+            <div class="slide slide-img active" id="slide-img">
+              <img src="static/images/hero-en.jpg" alt="Perennia Solution" id="sidebar-image">
+              <div class="img-caption" id="sidebar-caption">Innovative Solutions for Tomorrow</div>
+            </div>
+            <div class="slide slide-text" id="slide-text-1">
+              <span class="quote-mark">&ldquo;</span>
+              <p class="quote-text" id="quote-text-1"></p>
+              <span class="quote-label" id="quote-label-1"></span>
+            </div>
+            <div class="slide slide-text" id="slide-text-2">
+              <span class="quote-mark">&ldquo;</span>
+              <p class="quote-text" id="quote-text-2"></p>
+              <span class="quote-label" id="quote-label-2"></span>
+            </div>
+          </div>
+          <div class="slide-dots" id="slide-dots"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="chat-footer">© 2024 PERENNIA · بيرينيا</footer>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   PERENNIA — HOME PAGE + AI CHAT
+   All provider/config/knowledge-base logic lives server-side.
+   The browser only ever exchanges chat turns with /api/chat — it
+   never sees an API key, provider config, or the raw knowledge base.
+═══════════════════════════════════════════════════════════ */
+
+const HOME_TXT = {
+  en: { welcome: 'Welcome to Perennia', tagline: 'Visit our V-Lounge for more', hint: 'Tap to start chatting', ourWork: 'Our Work', contactUs: 'Contact Us' },
+  ar: { welcome: 'مرحبا بك في بيرينيا', tagline: 'زوروا V-Lounge الخاص بنا لمزيد من المعلومات', hint: 'انقر لبدء الدردشة', ourWork: 'أعمالنا', contactUs: 'اتصل بنا' }
+};
+
+const COPY = {
+  en: {
+    tagline: ['Solving Today. ', 'Shaping Tomorrow.'],
+    sub: 'AI-POWERED TECHNOLOGY & INNOVATION',
+    header: ["", 'Perennia', "'s AI Assistant — here to help"],
+    welcome: "Hello! I'm Perennia's AI assistant. Ask me anything about our company — our solutions, products, industries we serve, or what makes us different.",
+    placeholder: 'Ask about our solutions, products, or anything…',
+    chips: ['What does Perennia do?', 'Tell me about your products', 'Which industries do you serve?', 'What makes you different?'],
+    toggle: 'AR | عربي',
+    aiAvatar: 'P',
+    faqTitle: 'Quick Questions',
+    faq: [
+      { html: 'Tell me <strong>about</strong> the company', ask: 'Tell me about the company' },
+      { html: 'What <strong>services</strong> do you offer', ask: 'What services do you offer?' },
+      { html: 'How to <strong>Contact</strong> you', ask: 'How to contact you?' },
+    ],
+    cta: '💬 Talk to Us',
+    sidebarImageAlt: 'Perennia Solution',
+    sidebarCaption: 'Innovative Solutions for Tomorrow',
+    sidebarQuotes: [
+      { text: 'We turn bold ideas into products people love.', label: 'Our Approach' },
+      { text: 'Technology built with purpose, guided by vision.', label: 'Our Philosophy' },
+    ],
+    limitNudge: "We've covered a lot! If you'd like to go deeper, I can set up a quick call with our team.",
+    leavingNudge: "Before you go — want me to book a short call with our team to continue this?",
+    bkTitle: 'Talk to Us',
+    bkSub: "Pick a time that works for you — we'll confirm by email.",
+    bkDate: 'Date', bkSlot: 'Available times', bkName: 'Name', bkEmail: 'Email',
+    bkPhone: 'Phone (optional)', bkService: 'What are you interested in? (optional)', bkNotes: 'Notes (optional)',
+    bkCancel: 'Cancel', bkSubmit: 'Confirm Booking', bkSubmitting: 'Booking…',
+    bkPickDate: 'Pick a date to see available times',
+    bkNoSlots: 'No times available that day — try another date.',
+    bkLoading: 'Loading times…',
+    bkErrName: 'Please enter your name.',
+    bkErrEmail: 'Please enter a valid email address.',
+    bkErrSlot: 'Please pick a time.',
+    bkErrGeneric: 'Could not book that slot. Please try again.',
+    bkSuccess: (label, id) => `You're booked for <strong>${label}</strong>.<br>Appointment ID: <strong>${id}</strong> — a confirmation email is on its way.`,
+    bkTabNew: 'New Appointment',
+    bkTabManage: 'Manage Booking',
+    bkLookupId: 'Appointment ID',
+    bkLookupEmail: 'Email used to book',
+    bkLookupBtn: 'Find My Appointment',
+    bkLookupErrNotFound: 'No appointment found with that ID and email.',
+    bkLookupErrGeneric: 'Something went wrong looking that up. Please try again.',
+    bkFindDifferent: 'Look up a different appointment',
+    bkCancelApptBtn: 'Cancel Appointment',
+    bkRescheduleBtn: 'Reschedule',
+    bkReschedBack: 'Back',
+    bkReschedConfirmBtn: 'Confirm New Time',
+    bkModifyBlocked: (h) => `Changes need at least ${h} hours' notice — this appointment is too close to reschedule or cancel here. Please contact us directly.`,
+    bkCancelConfirm: 'Are you sure you want to cancel this appointment?',
+    bkCancelSuccess: (label, id) => `Appointment <strong>${id}</strong> (${label}) has been cancelled. A confirmation email is on its way.`,
+    bkRescheduleSuccess: (label, id) => `Appointment <strong>${id}</strong> has been moved to <strong>${label}</strong>. A confirmation email is on its way.`,
+    apptSummary: (a) => {
+      const dt = new Date(a.start);
+      const when = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' at ' +
+        dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const statusHtml = a.status === 'cancelled' ? '<span class="appt-status-cancelled">Cancelled</span>' : 'Confirmed';
+      return `<div class="appt-id">${a.id}</div>${a.name ? a.name + '<br>' : ''}<b>When:</b> ${when}<br><b>Status:</b> ${statusHtml}`;
+    },
+  },
+  ar: {
+    tagline: ['حلول اليوم. ', 'لصناعة الغد.'],
+    sub: 'تكنولوجيا وابتكار مدعومة بالذكاء الاصطناعي',
+    header: ['مساعد ', 'بيرينيا', ' الذكي — هنا لمساعدتك'],
+    welcome: 'مرحباً! أنا المساعد الذكي لبيرينيا. اسألني أي شيء عن شركتنا — حلولنا، منتجاتنا، القطاعات التي نخدمها، أو ما يميّزنا.',
+    placeholder: 'اسألني عن حلولنا أو منتجاتنا أو أي شيء آخر…',
+    chips: ['ما الذي تقدمه بيرينيا؟', 'أخبرني عن منتجاتكم', 'ما القطاعات التي تخدمونها؟', 'ما الذي يميزكم؟'],
+    toggle: 'EN | English',
+    aiAvatar: 'ب',
+    faqTitle: 'أسئلة سريعة',
+    faq: [
+      { html: 'أخبرني <strong>عن</strong> الشركة', ask: 'أخبرني عن الشركة' },
+      { html: 'ما <strong>الخدمات</strong> التي تقدمونها', ask: 'ما الخدمات التي تقدمونها؟' },
+      { html: 'كيفية <strong>التواصل</strong> معكم', ask: 'كيف يمكنني التواصل معكم؟' },
+    ],
+    cta: '💬 تحدث معنا',
+    sidebarImageAlt: 'حل بيرينيا',
+    sidebarCaption: 'حلول مبتكرة للغد',
+    sidebarQuotes: [
+      { text: 'نحوّل الأفكار الجريئة إلى منتجات يحبها الناس.', label: 'نهجنا' },
+      { text: 'تقنية تُبنى بهدف، وتُقاد برؤية.', label: 'فلسفتنا' },
+    ],
+    limitNudge: 'تحدثنا عن الكثير! إذا أردت التعمق أكثر، يمكنني ترتيب مكالمة سريعة مع فريقنا.',
+    leavingNudge: 'قبل أن تذهب — هل تود أن أحجز لك مكالمة قصيرة مع فريقنا لمتابعة الحديث؟',
+    bkTitle: 'تحدث معنا',
+    bkSub: 'اختر الوقت المناسب لك — سنؤكد الحجز عبر البريد الإلكتروني.',
+    bkDate: 'التاريخ', bkSlot: 'الأوقات المتاحة', bkName: 'الاسم', bkEmail: 'البريد الإلكتروني',
+    bkPhone: 'رقم الهاتف (اختياري)', bkService: 'ما الذي يهمك؟ (اختياري)', bkNotes: 'ملاحظات (اختياري)',
+    bkCancel: 'إلغاء', bkSubmit: 'تأكيد الحجز', bkSubmitting: 'جارِ الحجز…',
+    bkPickDate: 'اختر تاريخاً لعرض الأوقات المتاحة',
+    bkNoSlots: 'لا توجد أوقات متاحة في هذا اليوم — جرّب تاريخاً آخر.',
+    bkLoading: 'جارِ تحميل الأوقات…',
+    bkErrName: 'يرجى إدخال اسمك.',
+    bkErrEmail: 'يرجى إدخال بريد إلكتروني صحيح.',
+    bkErrSlot: 'يرجى اختيار وقت.',
+    bkErrGeneric: 'تعذّر حجز هذا الموعد. يرجى المحاولة مرة أخرى.',
+    bkSuccess: (label, id) => `تم حجز موعدك في <strong>${label}</strong>.<br>رقم الموعد: <strong>${id}</strong> — ستصلك رسالة تأكيد قريباً.`,
+    bkTabNew: 'حجز جديد',
+    bkTabManage: 'إدارة الحجز',
+    bkLookupId: 'رقم الموعد',
+    bkLookupEmail: 'البريد الإلكتروني المستخدم للحجز',
+    bkLookupBtn: 'ابحث عن موعدي',
+    bkLookupErrNotFound: 'لم يتم العثور على موعد بهذا الرقم والبريد الإلكتروني.',
+    bkLookupErrGeneric: 'حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.',
+    bkFindDifferent: 'ابحث عن موعد آخر',
+    bkCancelApptBtn: 'إلغاء الموعد',
+    bkRescheduleBtn: 'إعادة الجدولة',
+    bkReschedBack: 'رجوع',
+    bkReschedConfirmBtn: 'تأكيد الموعد الجديد',
+    bkModifyBlocked: (h) => `التعديلات تتطلب إشعاراً قبل ${h} ساعات على الأقل — هذا الموعد قريب جداً لتعديله هنا. يرجى التواصل معنا مباشرة.`,
+    bkCancelConfirm: 'هل أنت متأكد أنك تريد إلغاء هذا الموعد؟',
+    bkCancelSuccess: (label, id) => `تم إلغاء الموعد <strong>${id}</strong> (${label}). ستصلك رسالة تأكيد قريباً.`,
+    bkRescheduleSuccess: (label, id) => `تم نقل الموعد <strong>${id}</strong> إلى <strong>${label}</strong>. ستصلك رسالة تأكيد قريباً.`,
+    apptSummary: (a) => {
+      const dt = new Date(a.start);
+      const when = dt.toLocaleDateString('ar', { weekday: 'long', month: 'long', day: 'numeric' }) + ' الساعة ' +
+        dt.toLocaleTimeString('ar', { hour: 'numeric', minute: '2-digit' });
+      const statusHtml = a.status === 'cancelled' ? '<span class="appt-status-cancelled">ملغى</span>' : 'مؤكد';
+      return `<div class="appt-id">${a.id}</div>${a.name ? a.name + '<br>' : ''}<b>الموعد:</b> ${when}<br><b>الحالة:</b> ${statusHtml}`;
+    },
+  }
+};
+
+// ── State ─────────────────────────────────────────────────
+let lang = 'en';
+let history = [];
+let busy = false;
+let aiAvatarSrc = null;
+let sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+let chatLocked = false;
+let chatOpen = false;
+let appointmentBooked = false;
+let pickedSlot = null;
+let autoTransitionTimer = null;
+
+const LEAVE_RE = /\b(bye|goodbye|thanks?,?\s*that'?s\s*all|no\s*thanks|that'?s\s*it|gtg|got\s*to\s*go|see\s*ya)\b|(مع السلامة|شكراً هذا كل شيء|هذا كل شيء|إلى اللقاء)/i;
+
+// ── Detect an admin-uploaded assistant avatar (falls back silently to the letter avatar if none exists) ──
+function checkAvatar() {
+  return new Promise(resolve => {
+    const candidates = ['static/images/ai_avatar.svg', 'static/images/ai_avatar.png'];
+    let i = 0;
+    const tryNext = () => {
+      if (i >= candidates.length) { aiAvatarSrc = null; resolve(); return; }
+      const src = candidates[i++] + '?t=' + Date.now();
+      const img = new Image();
+      img.onload  = () => { aiAvatarSrc = src; resolve(); };
+      img.onerror = tryNext;
+      img.src = src;
+    };
+    tryNext();
+  });
+}
+
+// ── Image sidebar rotator — cycles through whichever slides are actually
+// available (the hero image only if it loads; the philosophy quotes always,
+// since they're built-in text). Keeps the same glass/gold visual language
+// throughout so the rotation feels like one coherent piece, not a bolt-on. ──
+let slideList = [];
+let slideIndex = 0;
+let slideTimer = null;
+let sidebarImageOk = false;
+
+function initSidebarImage() {
+  const img = document.getElementById('sidebar-image');
+  if (!img) return;
+  const handleLoad = () => { sidebarImageOk = true; buildSlides(); };
+  const handleError = () => { sidebarImageOk = false; buildSlides(); };
+  img.onload = handleLoad;
+  img.onerror = handleError;
+  // The <img> has a src set directly in HTML, so it may already have
+  // finished (or failed) loading before this listener was attached.
+  if (img.complete) { img.naturalWidth > 0 ? handleLoad() : handleError(); }
+}
+
+function buildSlides() {
+  const sidebar = document.getElementById('image-sidebar');
+  if (!sidebar) return;
+  slideList = [];
+  if (sidebarImageOk) slideList.push('slide-img');
+  slideList.push('slide-text-1', 'slide-text-2');
+  slideIndex = 0;
+  document.querySelectorAll('#slide-frame .slide').forEach(s => s.classList.toggle('active', s.id === slideList[0]));
+  renderSlideDots();
+  startSlideRotation();
+}
+
+function renderSlideDots() {
+  const dotsEl = document.getElementById('slide-dots');
+  if (!dotsEl) return;
+  dotsEl.innerHTML = '';
+  if (slideList.length <= 1) return;
+  slideList.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', `Slide ${i + 1}`);
+    dot.onclick = () => { goToSlide(i); startSlideRotation(); };
+    dotsEl.appendChild(dot);
+  });
+}
+
+function goToSlide(i) {
+  if (!slideList.length) return;
+  slideIndex = ((i % slideList.length) + slideList.length) % slideList.length;
+  document.querySelectorAll('#slide-frame .slide').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(slideList[slideIndex]);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('#slide-dots .slide-dot').forEach((d, idx) => d.classList.toggle('active', idx === slideIndex));
+}
+
+function startSlideRotation() {
+  clearInterval(slideTimer);
+  if (slideList.length <= 1) return;
+  slideTimer = setInterval(() => goToSlide(slideIndex + 1), 6000);
+}
+
+
+function renderHomeUI() {
+  const h = HOME_TXT[lang];
+  document.getElementById('home-welcome-text').textContent = h.welcome;
+  document.getElementById('home-tagline-text').textContent = h.tagline;
+  document.getElementById('home-hint-text').textContent = h.hint;
+  document.getElementById('our-work-link').textContent = h.ourWork;
+  document.getElementById('contact-link').textContent = h.contactUs;
+
+  const isAr = lang === 'ar';
+  document.getElementById('home-logo-en').style.display = isAr ? 'none' : 'block';
+  document.getElementById('home-logo-ar').style.display = isAr ? 'block' : 'none';
+  if (document.getElementById('home-logo-en').style.display === 'none') document.getElementById('home-wordmark-en').style.display = 'none';
+}
+
+function startAutoTransition() {
+  clearAutoTransition();
+  const fill = document.getElementById('home-progress');
+  fill.classList.remove('running');
+  // force reflow so the width:0 reset takes effect before we animate again
+  void fill.offsetWidth;
+  fill.classList.add('running');
+  autoTransitionTimer = setTimeout(() => { openChat(); }, 7000);
+}
+
+function clearAutoTransition() {
+  if (autoTransitionTimer) { clearTimeout(autoTransitionTimer); autoTransitionTimer = null; }
+  const fill = document.getElementById('home-progress');
+  fill.classList.remove('running');
+  fill.style.width = '0%';
+}
+
+async function initHome() {
+  try {
+    const response = await fetch('/api/landing-config');
+    const data = await response.json();
+    if (data.landing) {
+      if (data.landing['welcomeText-en']) HOME_TXT.en.welcome = data.landing['welcomeText-en'];
+      if (data.landing['welcomeText-ar']) HOME_TXT.ar.welcome = data.landing['welcomeText-ar'];
+      if (data.landing['tagline-en']) HOME_TXT.en.tagline = data.landing['tagline-en'];
+      if (data.landing['tagline-ar']) HOME_TXT.ar.tagline = data.landing['tagline-ar'];
+      if (data.landing['ourWorkUrl']) window.ourWorkUrl = data.landing['ourWorkUrl'];
+      if (data.landing['contactUrl']) window.contactUrl = data.landing['contactUrl'];
+    }
+    if (data.booking && data.booking['promptsEn']) COPY.en.chips = data.booking['promptsEn'];
+    if (data.booking && data.booking['promptsAr']) COPY.ar.chips = data.booking['promptsAr'];
+  } catch (err) {
+    console.log('Using default landing config');
+  }
+  renderHomeUI();
+}
+
+document.getElementById('home-center').addEventListener('click', () => openChat());
+document.getElementById('our-work-link').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const url = window.ourWorkUrl || '#';
+  if (url.startsWith('http')) window.open(url, '_blank'); else if (url !== '#') window.location.href = url;
+});
+document.getElementById('contact-link').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const url = window.contactUrl || '#';
+  if (url.startsWith('http')) window.open(url, '_blank'); else if (url !== '#') window.location.href = url;
+});
+
+// ── Chat page open / close ─────────────────────────────────
+function openChat() {
+  if (chatOpen) return;
+  chatOpen = true;
+  clearAutoTransition();
+  document.body.classList.add('chat-active');
+  document.body.style.overflow = 'hidden';
+  const el = document.getElementById('chat-page');
+  el.style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('active')));
+  setTimeout(() => document.getElementById('input').focus(), 400);
+}
+
+function closeChat() {
+  chatOpen = false;
+  document.body.classList.remove('chat-active');
+  document.body.style.overflow = 'auto';
+  const el = document.getElementById('chat-page');
+  el.classList.remove('active');
+  setTimeout(() => { if (!chatOpen) el.style.display = 'none'; }, 400);
+  startAutoTransition();
+}
+
+// Close chat on ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && chatOpen) closeChat();
+});
+
+// ── Render helpers ────────────────────────────────────────
+function scrollBottom() {
+  const el = document.getElementById('messages');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderUI() {
+  const c = COPY[lang];
+  const isAr = lang === 'ar';
+
+  document.documentElement.lang = lang;
+  document.documentElement.dir  = isAr ? 'rtl' : 'ltr';
+
+  const logoEn = document.getElementById('logo-en');
+  const logoAr = document.getElementById('logo-ar');
+  if (isAr) { logoEn.style.display = 'none'; logoAr.style.display = 'block'; }
+  else { logoAr.style.display = 'none'; logoEn.style.display = 'block'; }
+
+  document.getElementById('tagline-line1').textContent = c.tagline[0];
+  document.getElementById('tagline-line2').textContent = c.tagline[1];
+  document.getElementById('tagline-sub').textContent = c.sub;
+
+  const sidebarImg = document.getElementById('sidebar-image');
+  sidebarImg.alt = c.sidebarImageAlt;
+  sidebarImg.src = isAr ? 'static/images/hero-ar.jpg' : 'static/images/hero-en.jpg';
+  document.getElementById('sidebar-caption').textContent = c.sidebarCaption;
+  c.sidebarQuotes.forEach((q, i) => {
+    document.getElementById(`quote-text-${i + 1}`).textContent = q.text;
+    document.getElementById(`quote-label-${i + 1}`).textContent = q.label;
+  });
+
+  // Branding: "<Brand>'s AI Assistant" — keep consistent wording in the chat header
+  const h = document.getElementById('chat-header');
+  h.innerHTML = c.header[0] + `<b>${c.header[1]}</b>` + c.header[2];
+
+  document.getElementById('input').placeholder = c.placeholder;
+  document.getElementById('lang-btn').textContent = c.toggle;
+  document.getElementById('home-lang-btn').textContent = c.toggle;
+  document.getElementById('book-btn-label').textContent = isAr ? 'تحدث معنا' : 'Talk to Us';
+
+  const chipsEl = document.getElementById('chips');
+  chipsEl.innerHTML = '';
+  c.chips.forEach(text => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = text;
+    btn.onclick = () => sendText(text);
+    chipsEl.appendChild(btn);
+  });
+
+  document.getElementById('faq-title').textContent = c.faqTitle;
+  const faqEl = document.getElementById('faq-list');
+  faqEl.innerHTML = '';
+  c.faq.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'faq-item';
+    btn.innerHTML = item.html;
+    btn.disabled = busy;
+    btn.onclick = () => sendText(item.ask);
+    faqEl.appendChild(btn);
+  });
+
+  renderHomeUI();
+}
+
+function avatarInner(role) {
+  const c = COPY[lang];
+  if (role === 'ai' && aiAvatarSrc) {
+    return `<img src="${aiAvatarSrc}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  }
+  return role === 'ai' ? c.aiAvatar : '✦';
+}
+
+function addMsg(role, text, opts) {
+  const c = COPY[lang];
+  const container = document.getElementById('messages');
+
+  const row = document.createElement('div');
+  row.className = `msg ${role}`;
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.innerHTML = avatarInner(role);
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+
+  if (opts && opts.cta) {
+    const ctaRow = document.createElement('div');
+    ctaRow.className = 'cta-row';
+    const ctaBtn = document.createElement('button');
+    ctaBtn.className = 'cta-btn';
+    ctaBtn.textContent = c.cta;
+    ctaBtn.onclick = () => openBooking();
+    ctaRow.appendChild(ctaBtn);
+    bub.appendChild(ctaRow);
+  }
+
+  row.appendChild(av);
+  row.appendChild(bub);
+  container.appendChild(row);
+  scrollBottom();
+}
+
+function showTyping() {
+  const container = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg ai';
+  row.id = 'typing';
+  if (lang === 'ar') row.style.flexDirection = 'row-reverse';
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.innerHTML = avatarInner('ai');
+
+  const bub = document.createElement('div');
+  bub.className = 'typing-bubble';
+  bub.innerHTML = '<span></span><span></span><span></span>';
+
+  row.appendChild(av);
+  row.appendChild(bub);
+  container.appendChild(row);
+  scrollBottom();
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+// ── API call — talks only to our own backend at /api/chat. The backend holds the provider, model, and API key. ──
+async function callAI(userMessage) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lang, message: userMessage, history, sessionId })
+  });
+  if (!res.ok) throw new Error(`chat ${res.status}`);
+  return res.json();
+}
+
+// ── Send ──────────────────────────────────────────────────
+function setFaqDisabled(disabled) {
+  document.querySelectorAll('.faq-item').forEach(btn => btn.disabled = disabled);
+}
+
+function lockChat() {
+  chatLocked = true;
+  const inp = document.getElementById('input');
+  inp.disabled = true;
+  document.getElementById('send-btn').disabled = true;
+  setFaqDisabled(true);
+  document.getElementById('chips').innerHTML = '';
+}
+
+async function sendText(text) {
+  if (busy || chatLocked || !text.trim()) return;
+  busy = true;
+
+  const leavingIntent = LEAVE_RE.test(text) && !appointmentBooked && history.length >= 2;
+
+  document.getElementById('chips').innerHTML = '';
+  document.getElementById('send-btn').disabled = true;
+  setFaqDisabled(true);
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+
+  showTyping();
+  try {
+    const data = await callAI(text);
+    hideTyping();
+    const nearLimit = !data.limitReached && data.maxTurns && (data.maxTurns - data.turnsUsed) <= 3;
+    addMsg('ai', data.reply, { cta: data.limitReached || nearLimit });
+    history.push({ role: 'assistant', content: data.reply });
+
+    if (data.limitReached) {
+      lockChat();
+    } else if (leavingIntent && !nearLimit) {
+      setTimeout(() => addMsg('ai', COPY[lang].leavingNudge, { cta: true }), 450);
+    }
+  } catch(err) {
+    hideTyping();
+    addMsg('ai', lang === 'ar' ? 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Sorry, something went wrong. Please try again.');
+    console.error(err);
+  }
+
+  busy = false;
+  if (!chatLocked) {
+    setFaqDisabled(false);
+    const inp = document.getElementById('input');
+    document.getElementById('send-btn').disabled = !inp.value.trim();
+    inp.focus();
+  }
+}
+
+function send() {
+  const inp = document.getElementById('input');
+  const text = inp.value.trim();
+  inp.value = '';
+  inp.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  sendText(text);
+}
+
+// ── Language toggle (shared between home page and chat page) ──
+function toggleLang() {
+  lang = lang === 'en' ? 'ar' : 'en';
+  history = [];
+  chatLocked = false;
+  const inp = document.getElementById('input');
+  inp.disabled = false;
+  document.getElementById('messages').innerHTML = '';
+  renderUI();
+  addMsg('ai', COPY[lang].welcome);
+}
+
+// ── Talk to Us — lives inside the chat shell now, and every successful
+// action (book / reschedule / cancel) also posts a message into the chat
+// transcript, so the booking stays "synced" with the conversation itself. ──
+let pickedRescheduleSlot = null;
+let currentManagedAppt = null;
+
+function fmtWhen(iso, label) {
+  const dt = new Date(iso);
+  const locale = lang === 'ar' ? 'ar' : 'en-US';
+  const datePart = dt.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
+  if (label) return `${datePart} · ${label}`;
+  const timePart = dt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  return `${datePart} · ${timePart}`;
+}
+
+function bkText() {
+  const c = COPY[lang];
+  document.getElementById('bk-title').textContent = c.bkTitle;
+  document.getElementById('bk-sub').textContent = c.bkSub;
+  document.getElementById('bk-tab-new').textContent = c.bkTabNew;
+  document.getElementById('bk-tab-manage').textContent = c.bkTabManage;
+  document.getElementById('bk-lbl-date').textContent = c.bkDate;
+  document.getElementById('bk-lbl-slot').textContent = c.bkSlot;
+  document.getElementById('bk-lbl-name').textContent = c.bkName;
+  document.getElementById('bk-lbl-email').textContent = c.bkEmail;
+  document.getElementById('bk-lbl-phone').textContent = c.bkPhone;
+  document.getElementById('bk-lbl-service').textContent = c.bkService;
+  document.getElementById('bk-lbl-notes').textContent = c.bkNotes;
+  document.getElementById('bk-cancel-btn').textContent = c.bkCancel;
+  document.getElementById('bk-submit-btn').textContent = c.bkSubmit;
+  document.getElementById('bk-slots-msg').textContent = c.bkPickDate;
+  document.getElementById('bk-lbl-lookup-id').textContent = c.bkLookupId;
+  document.getElementById('bk-lbl-lookup-email').textContent = c.bkLookupEmail;
+  document.getElementById('bk-lookup-btn').textContent = c.bkLookupBtn;
+  document.getElementById('bk-cancel-appt-btn').textContent = c.bkCancelApptBtn;
+  document.getElementById('bk-reschedule-btn').textContent = c.bkRescheduleBtn;
+  document.getElementById('bk-manage-back-btn').textContent = c.bkFindDifferent;
+  document.getElementById('bk-lbl-re-date').textContent = c.bkDate;
+  document.getElementById('bk-lbl-re-slot').textContent = c.bkSlot;
+  document.getElementById('bk-re-slots-msg').textContent = c.bkPickDate;
+  document.getElementById('bk-re-submit-btn').textContent = c.bkReschedConfirmBtn;
+}
+
+function switchBkTab(tab) {
+  document.getElementById('bk-tab-new').classList.toggle('active', tab === 'new');
+  document.getElementById('bk-tab-manage').classList.toggle('active', tab === 'manage');
+  document.getElementById('bk-new-view').style.display = tab === 'new' ? 'block' : 'none';
+  document.getElementById('bk-manage-view').style.display = tab === 'manage' ? 'block' : 'none';
+  document.getElementById('bk-success').style.display = 'none';
+}
+
+function openBooking() {
+  bkText();
+  switchBkTab('new');
+  document.getElementById('bk-err').textContent = '';
+  pickedSlot = null;
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('bk-date').min = today;
+  document.getElementById('bk-re-date').min = today;
+  resetManageView();
+  document.getElementById('booking-panel').classList.add('open');
+}
+
+function closeBooking() {
+  document.getElementById('booking-panel').classList.remove('open');
+}
+
+async function loadSlots() {
+  const c = COPY[lang];
+  const date = document.getElementById('bk-date').value;
+  const slotsEl = document.getElementById('bk-slots');
+  pickedSlot = null;
+  if (!date) { slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkPickDate}</div>`; return; }
+  slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkLoading}</div>`;
+  try {
+    const res = await fetch(`/api/appointments/availability?date=${encodeURIComponent(date)}`);
+    const data = await res.json();
+    const slots = data.slots || [];
+    if (!slots.length) { slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkNoSlots}</div>`; return; }
+    slotsEl.innerHTML = '';
+    slots.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'bk-slot';
+      btn.textContent = s.label;
+      btn.onclick = () => {
+        pickedSlot = s;
+        slotsEl.querySelectorAll('.bk-slot').forEach(b => b.classList.remove('picked'));
+        btn.classList.add('picked');
+      };
+      slotsEl.appendChild(btn);
+    });
+  } catch {
+    slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkNoSlots}</div>`;
+  }
+}
+
+async function submitBooking() {
+  const c = COPY[lang];
+  const errEl = document.getElementById('bk-err');
+  const name = document.getElementById('bk-name').value.trim();
+  const email = document.getElementById('bk-email').value.trim();
+
+  if (!name) { errEl.textContent = c.bkErrName; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = c.bkErrEmail; return; }
+  if (!pickedSlot) { errEl.textContent = c.bkErrSlot; return; }
+  errEl.textContent = '';
+
+  const submitBtn = document.getElementById('bk-submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = c.bkSubmitting;
+
+  try {
+    const res = await fetch('/api/appointments/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, email,
+        phone: document.getElementById('bk-phone').value.trim(),
+        service: document.getElementById('bk-service').value.trim(),
+        notes: document.getElementById('bk-notes').value.trim(),
+        start: pickedSlot.start,
+        end: pickedSlot.end,
+        lang,
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || c.bkErrGeneric);
+
+    appointmentBooked = true;
+    const label = fmtWhen(pickedSlot.start, pickedSlot.label);
+    document.getElementById('bk-new-view').style.display = 'none';
+    document.getElementById('bk-manage-view').style.display = 'none';
+    document.getElementById('bk-success').style.display = 'block';
+    document.getElementById('bk-success-msg').innerHTML = c.bkSuccess(label, data.id);
+
+    // Sync the result into the actual conversation, not just the panel.
+    addMsg('ai', c.bkSuccess(label, data.id).replace(/<br>/g, '\n'));
+  } catch (e) {
+    errEl.textContent = e.message || c.bkErrGeneric;
+  }
+  submitBtn.disabled = false;
+  submitBtn.textContent = c.bkSubmit;
+}
+
+// ── Manage an existing appointment: lookup, reschedule, cancel ──
+function resetManageView() {
+  currentManagedAppt = null;
+  pickedRescheduleSlot = null;
+  document.getElementById('bk-lookup-form').style.display = 'block';
+  document.getElementById('bk-manage-details').style.display = 'none';
+  document.getElementById('bk-reschedule-panel').style.display = 'none';
+  document.getElementById('bk-manage-actions').style.display = 'flex';
+  document.getElementById('bk-modify-notice').style.display = 'none';
+  document.getElementById('bk-lookup-err').textContent = '';
+  document.getElementById('bk-lookup-id').value = '';
+  document.getElementById('bk-lookup-email').value = '';
+}
+
+async function lookupAppointment() {
+  const c = COPY[lang];
+  const errEl = document.getElementById('bk-lookup-err');
+  const id = document.getElementById('bk-lookup-id').value.trim();
+  const email = document.getElementById('bk-lookup-email').value.trim();
+  if (!id || !email) { errEl.textContent = c.bkLookupErrNotFound; return; }
+  errEl.textContent = '';
+
+  const btn = document.getElementById('bk-lookup-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/appointments/lookup?id=${encodeURIComponent(id)}&email=${encodeURIComponent(email)}`);
+    if (res.status === 404) { errEl.textContent = c.bkLookupErrNotFound; btn.disabled = false; return; }
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    currentManagedAppt = data;
+
+    document.getElementById('bk-appt-summary').innerHTML = c.apptSummary(data);
+    const notice = document.getElementById('bk-modify-notice');
+    const actions = document.getElementById('bk-manage-actions');
+    if (data.status === 'cancelled') {
+      notice.style.display = 'none';
+      actions.style.display = 'none';
+    } else if (!data.canModify) {
+      notice.textContent = c.bkModifyBlocked(data.minNoticeHours);
+      notice.style.display = 'block';
+      actions.style.display = 'none';
+    } else {
+      notice.style.display = 'none';
+      actions.style.display = 'flex';
+    }
+
+    document.getElementById('bk-lookup-form').style.display = 'none';
+    document.getElementById('bk-manage-details').style.display = 'block';
+  } catch {
+    errEl.textContent = c.bkLookupErrGeneric;
+  }
+  btn.disabled = false;
+}
+
+function showReschedulePanel() {
+  document.getElementById('bk-manage-actions').style.display = 'none';
+  document.getElementById('bk-reschedule-panel').style.display = 'block';
+  document.getElementById('bk-re-err').textContent = '';
+}
+
+function hideReschedulePanel() {
+  document.getElementById('bk-reschedule-panel').style.display = 'none';
+  document.getElementById('bk-manage-actions').style.display = 'flex';
+}
+
+async function loadRescheduleSlots() {
+  const c = COPY[lang];
+  const date = document.getElementById('bk-re-date').value;
+  const slotsEl = document.getElementById('bk-re-slots');
+  pickedRescheduleSlot = null;
+  if (!date) { slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkPickDate}</div>`; return; }
+  slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkLoading}</div>`;
+  try {
+    const res = await fetch(`/api/appointments/availability?date=${encodeURIComponent(date)}`);
+    const data = await res.json();
+    const slots = data.slots || [];
+    if (!slots.length) { slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkNoSlots}</div>`; return; }
+    slotsEl.innerHTML = '';
+    slots.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'bk-slot';
+      btn.textContent = s.label;
+      btn.onclick = () => {
+        pickedRescheduleSlot = s;
+        slotsEl.querySelectorAll('.bk-slot').forEach(b => b.classList.remove('picked'));
+        btn.classList.add('picked');
+      };
+      slotsEl.appendChild(btn);
+    });
+  } catch {
+    slotsEl.innerHTML = `<div class="bk-slots-empty">${c.bkNoSlots}</div>`;
+  }
+}
+
+async function submitReschedule() {
+  const c = COPY[lang];
+  const errEl = document.getElementById('bk-re-err');
+  if (!currentManagedAppt) return;
+  if (!pickedRescheduleSlot) { errEl.textContent = c.bkErrSlot; return; }
+  errEl.textContent = '';
+
+  const btn = document.getElementById('bk-re-submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/appointments/reschedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentManagedAppt.id,
+        email: document.getElementById('bk-lookup-email').value.trim() || currentManagedAppt.email,
+        start: pickedRescheduleSlot.start,
+        end: pickedRescheduleSlot.end,
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || c.bkErrGeneric);
+
+    const label = fmtWhen(pickedRescheduleSlot.start, pickedRescheduleSlot.label);
+    document.getElementById('bk-manage-view').style.display = 'none';
+    document.getElementById('bk-success').style.display = 'block';
+    document.getElementById('bk-success-msg').innerHTML = c.bkRescheduleSuccess(label, data.id);
+    addMsg('ai', c.bkRescheduleSuccess(label, data.id).replace(/<br>/g, '\n'));
+  } catch (e) {
+    errEl.textContent = e.message || c.bkErrGeneric;
+  }
+  btn.disabled = false;
+}
+
+async function requestCancelAppointment() {
+  const c = COPY[lang];
+  if (!currentManagedAppt) return;
+  if (!window.confirm(c.bkCancelConfirm)) return;
+
+  const btn = document.getElementById('bk-cancel-appt-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/appointments/cancel-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentManagedAppt.id,
+        email: document.getElementById('bk-lookup-email').value.trim() || currentManagedAppt.email,
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || c.bkErrGeneric);
+
+    const label = fmtWhen(currentManagedAppt.start);
+    document.getElementById('bk-manage-view').style.display = 'none';
+    document.getElementById('bk-success').style.display = 'block';
+    document.getElementById('bk-success-msg').innerHTML = c.bkCancelSuccess(label, data.id);
+    addMsg('ai', c.bkCancelSuccess(label, data.id).replace(/<br>/g, '\n'));
+  } catch (e) {
+    document.getElementById('bk-modify-notice').textContent = e.message || c.bkErrGeneric;
+    document.getElementById('bk-modify-notice').style.display = 'block';
+  }
+  btn.disabled = false;
+}
+
+// ── Init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkAvatar();
+  await initHome();
+  initSidebarImage();
+  renderUI();
+  addMsg('ai', COPY[lang].welcome);
+
+  const inp = document.getElementById('input');
+  inp.addEventListener('input', () => {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 130) + 'px';
+    document.getElementById('send-btn').disabled = !inp.value.trim() || busy;
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  // Home → Chat auto-transition after 7 seconds (cancelled by manual open)
+  startAutoTransition();
+});
+</script>
+
+</body>
+</html>

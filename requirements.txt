@@ -1,0 +1,16 @@
+fastapi==0.140.12
+uvicorn[standard]==0.51.0
+httpx==0.28.1
+bcrypt==5.0.0
+cryptography==46.0.6
+itsdangerous==2.2.0
+slowapi==0.1.10
+python-multipart==0.0.32
+pypdf==5.9.0
+python-docx==1.2.0
+filetype==1.2.0
+python-dotenv==1.2.2
+pillow==12.1.1
+email-validator==2.2.0
+google-api-python-client==2.154.0
+google-auth==2.37.0

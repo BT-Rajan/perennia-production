@@ -1,0 +1,30 @@
+# Secrets — never commit these
+.env
+ADMIN_CREDENTIALS.txt
+
+# Runtime data (created automatically; config/knowledge base/appointments/stats)
+data/*.json
+!data/.gitkeep
+
+# Admin-uploaded assets (logo, avatar) — deployment-specific, not source
+public/static/images/logo_en.png
+public/static/images/logo_ar.png
+public/static/images/ai_avatar.png
+public/static/images/ai_avatar.svg
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
