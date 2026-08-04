@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import uvicorn
 from app.config import settings
+from app.logging_config import uvicorn_log_config
 
 
 def _open_browser_later(url: str, delay: float = 2.0) -> None:
@@ -49,13 +50,19 @@ def main() -> None:
             port=settings.HTTPS_PORT,
             ssl_certfile=cert,
             ssl_keyfile=key,
+            log_config=uvicorn_log_config(),
         )
     else:
         url = f"http://{settings.HOST}:{settings.PORT}"
         print(f"[run] Starting Perennia on {url}")
         print(f"[run] Admin panel: {url}/admin")
         _open_browser_later(url)
-        uvicorn.run("app.main:app", host=settings.HOST, port=settings.PORT)
+        uvicorn.run(
+            "app.main:app",
+            host=settings.HOST,
+            port=settings.PORT,
+            log_config=uvicorn_log_config(),
+        )
 
 
 if __name__ == "__main__":
