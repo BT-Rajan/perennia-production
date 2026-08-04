@@ -1224,7 +1224,7 @@ const LEAVE_RE = /\b(bye|goodbye|thanks?,?\s*that'?s\s*all|no\s*thanks|that'?s\s
 // ── Detect an admin-uploaded assistant avatar (falls back silently to the letter avatar if none exists) ──
 function checkAvatar() {
   return new Promise(resolve => {
-    const candidates = ['static/images/ai_avatar.svg', 'static/images/ai_avatar.png'];
+    const candidates = ['static/images/ai_avatar.png'];
     let i = 0;
     let settled = false;
     // A stalled/never-responding image request must never block the rest
