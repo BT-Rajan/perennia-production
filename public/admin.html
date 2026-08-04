@@ -85,6 +85,8 @@
     .sb-top { padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
     .sb-logo { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
     .sb-logo em { color: var(--gold); font-style: normal; }
+    .sb-logo-wrap { display: flex; align-items: center; }
+    .sb-logo-img { max-height: 26px; max-width: 100%; display: block; }
     .sb-tag { font-size: 0.63rem; color: rgba(255,255,255,0.28); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.2rem; }
 
     .sb-nav { flex: 1; padding: 0.75rem 0; }
@@ -253,7 +255,10 @@
 
   <aside class="sidebar">
     <div class="sb-top">
-      <div class="sb-logo">PEREN<em>NIA</em></div>
+      <div class="sb-logo-wrap" id="sb-logo-wrap">
+        <img class="sb-logo-img" id="sb-logo-img" alt="" style="display:none">
+        <div class="sb-logo" id="sb-logo-text" style="display:none"></div>
+      </div>
       <div class="sb-tag">Admin Panel</div>
     </div>
     <nav class="sb-nav">
@@ -1211,6 +1216,7 @@ function loadBranding() {
       if (el) el.value = chips[i] || '';
     }
   });
+  refreshSbLogo();
 }
 
 async function saveBranding() {
@@ -1222,6 +1228,7 @@ async function saveBranding() {
   try {
     await patchConfig({ landing: data });
     toast('✔ Branding & copy saved', 'ok');
+    refreshSbLogo();
   } catch (e) {
     toast(`✗ ${e.message}`, 'err');
   }
@@ -1260,6 +1267,26 @@ function loadLogos() {
     };
     img.src = src;
   });
+  refreshSbLogo();
+}
+
+// Sidebar identity: shows the uploaded EN logo image if one exists,
+// otherwise falls back to the configured brand name as text — exactly
+// one of the two, never a hardcoded wordmark. Re-run after any logo
+// upload/delete (via loadLogos) and after branding is (re)loaded, so it
+// always reflects what's actually saved.
+function refreshSbLogo() {
+  const brandEn = (document.getElementById('brandName-en')?.value || '').trim()
+    || (serverConfig && serverConfig.landing && serverConfig.landing['brandName-en'])
+    || 'Perennia';
+  const img = document.getElementById('sb-logo-img');
+  const txt = document.getElementById('sb-logo-text');
+  if (!img || !txt) return;
+  const src = `static/images/logo_en.png?t=` + Date.now();
+  const probe = new Image();
+  probe.onload = () => { img.src = src; img.alt = brandEn; img.style.display = 'block'; txt.style.display = 'none'; };
+  probe.onerror = () => { img.style.display = 'none'; txt.style.display = 'block'; txt.textContent = brandEn; };
+  probe.src = src;
 }
 
 function dOver(e, id)  { e.preventDefault(); document.getElementById(id).classList.add('over'); }
