@@ -897,10 +897,20 @@ function onProv() {
 }
 
 function buildChips(p) {
-  const cur = document.getElementById('model').value;
+  // If the model currently in the field doesn't belong to the provider we're
+  // switching to (e.g. it's a leftover Anthropic model name from before the
+  // provider was changed), it can't be trusted as "already correctly set" —
+  // reset it, otherwise a stale cross-provider model string gets silently
+  // saved and every chat request fails with a confusing generic error.
+  const presetsForProvider = PRESETS[p] || [];
+  let cur = document.getElementById('model').value;
+  if (cur && !presetsForProvider.includes(cur) && p !== 'custom') {
+    cur = '';
+    document.getElementById('model').value = '';
+  }
   const el  = document.getElementById('mchips');
   el.innerHTML = '';
-  (PRESETS[p] || []).forEach(m => {
+  presetsForProvider.forEach(m => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'mchip' + (m === cur ? ' on' : '');
@@ -912,8 +922,8 @@ function buildChips(p) {
     };
     el.appendChild(b);
   });
-  if (!cur && PRESETS[p]?.length) {
-    document.getElementById('model').value = PRESETS[p][0];
+  if (!cur && presetsForProvider.length) {
+    document.getElementById('model').value = presetsForProvider[0];
     el.querySelector('.mchip')?.classList.add('on');
   }
 }
