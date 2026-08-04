@@ -106,7 +106,11 @@ def build_system_prompt(
 
     kb_text = ""
     if knowledge_base:
-        docs = "\n\n".join(f"— {f['filename']} —\n{f['text']}" for f in knowledge_base if f.get("ok"))
+        docs = "\n\n".join(
+            f"— {f.get('filename', 'untitled')} —\n{f.get('text', '')}"
+            for f in knowledge_base
+            if f.get("ok") and f.get("text")
+        )
         if docs:
             kb_text = (
                 "\n\nADDITIONAL REFERENCE DOCUMENTS (uploaded by the Perennia team — "
