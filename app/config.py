@@ -35,6 +35,15 @@ class Settings:
     PORT: int = int(_get("PORT", "8001"))
     HOST: str = _get("HOST", "127.0.0.1")
 
+    # Server-side application logs (separate from console output). Kept
+    # outside PUBLIC_DIR so log contents (which can include stack traces
+    # from unhandled errors) are never web-accessible. Rotates so a busy
+    # server doesn't grow this file unboundedly.
+    LOG_DIR: Path = Path(_get("LOG_DIR", str(BASE_DIR / "logs")))
+    LOG_FILE: str = _get("LOG_FILE", "perennia.log")
+    LOG_MAX_BYTES: int = int(_get("LOG_MAX_BYTES", str(5 * 1024 * 1024)))  # 5 MB
+    LOG_BACKUP_COUNT: int = int(_get("LOG_BACKUP_COUNT", "5"))
+
     # Optional direct HTTPS bind (e.g. for internet-facing deployments
     # without a reverse proxy). Both files must exist for this to be used;
     # otherwise the app falls back to plain HTTP on HOST:PORT above.
@@ -116,3 +125,4 @@ class Settings:
 settings = Settings()
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
 (settings.PUBLIC_DIR / "static" / "images").mkdir(parents=True, exist_ok=True)
+settings.LOG_DIR.mkdir(parents=True, exist_ok=True)
