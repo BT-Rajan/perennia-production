@@ -14,3 +14,4 @@ pillow==12.1.1
 email-validator==2.2.0
 google-api-python-client==2.154.0
 google-auth==2.37.0
+tzdata==2025.2
