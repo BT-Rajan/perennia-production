@@ -128,6 +128,30 @@ class Settings:
     NURTURE_DELAY_HOURS: int = int(_get("NURTURE_DELAY_HOURS", "3"))
     NURTURE_CHECK_INTERVAL_MINUTES: int = int(_get("NURTURE_CHECK_INTERVAL_MINUTES", "15"))
 
+    # ── WhatsApp (optional, via Meta's WhatsApp Cloud API) ─────────
+    # Two different capabilities, because WhatsApp Business policy treats
+    # them differently:
+    #  1. Click-to-chat link (wa.me/<number>) — always available, needs
+    #     nothing but the public business number below. This is what
+    #     WHATSAPP_BUSINESS_NUMBER + the widget button use.
+    #  2. Sending a message *to* someone who hasn't messaged the business
+    #     first (a booking confirmation, a nurture nudge) requires the
+    #     Cloud API and, per Meta policy, an approved message template —
+    #     free-form text only works inside a 24h window after the visitor
+    #     messages in. Without WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID
+    #     and an approved template name, outbound sends are a no-op and
+    #     the click-to-chat link still works fine on its own.
+    WHATSAPP_ENABLED: bool = _get("WHATSAPP_ENABLED", "true").lower() == "true"
+    WHATSAPP_PHONE_NUMBER_ID: str = _get("WHATSAPP_PHONE_NUMBER_ID", "")
+    WHATSAPP_ACCESS_TOKEN: str = _get("WHATSAPP_ACCESS_TOKEN", "")
+    WHATSAPP_API_VERSION: str = _get("WHATSAPP_API_VERSION", "v21.0")
+    # Approved template names (create + get these approved in Meta Business
+    # Manager first). Left blank = that specific outbound send is skipped.
+    WHATSAPP_TEMPLATE_BOOKED: str = _get("WHATSAPP_TEMPLATE_BOOKED", "")
+    WHATSAPP_TEMPLATE_NURTURE: str = _get("WHATSAPP_TEMPLATE_NURTURE", "")
+    WHATSAPP_TEMPLATE_LANG_EN: str = _get("WHATSAPP_TEMPLATE_LANG_EN", "en_US")
+    WHATSAPP_TEMPLATE_LANG_AR: str = _get("WHATSAPP_TEMPLATE_LANG_AR", "ar")
+
 
 settings = Settings()
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)

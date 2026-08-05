@@ -683,11 +683,16 @@ async def get_landing_config():
     error, whether to render the logo image or the wordmark-text fallback
     — exactly one of the two is ever shown."""
     config = storage.load_config()
+    contact = config.get("contact", {})
     return {
         "landing": config.get("landing", {}),
         "booking": config.get("booking", {}),
         "hasLogoEn": (IMAGES_DIR / "logo_en.png").is_file(),
         "hasLogoAr": (IMAGES_DIR / "logo_ar.png").is_file(),
+        # The WhatsApp number itself isn't secret (it's public-facing, same
+        # as the phone number above it) — only the Cloud API access token
+        # is, and that never leaves the server. Blank = button hidden.
+        "contactWhatsapp": contact.get("ct-whatsapp", ""),
     }
 
 

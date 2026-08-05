@@ -41,6 +41,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "contact": {
         "ct-email": "info@perennia.com",
         "ct-phone": "+965 0000 0000",
+        "ct-whatsapp": "",        # public click-to-chat number; blank = button hidden
         "ct-addr-en": "Kuwait",
         "ct-addr-ar": "الكويت",
     },

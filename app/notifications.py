@@ -9,7 +9,7 @@ import datetime
 import logging
 
 from app.config import settings
-from app import storage, email_util
+from app import storage, email_util, whatsapp
 
 log = logging.getLogger("perennia.notifications")
 
@@ -124,3 +124,20 @@ def _send_pair(entry: dict, kind: str, old_start: str | None = None) -> None:
             email_util.send_email(admin_to, subj_admin, body_admin)
     except Exception as e:  # never let a notification failure surface to the caller
         log.warning("Appointment notification failed for %s: %s", appt_id, e)
+
+    # WhatsApp is additive, not a replacement for email, and only wired up
+    # for the "booked" confirmation for now (the highest-value one). Needs
+    # WHATSAPP_TEMPLATE_BOOKED configured with an approved template whose
+    # variables are (name, appointment id, when) in that order — if it
+    # isn't set, or the visitor gave no phone number, this is a no-op.
+    if kind == "booked" and entry.get("phone"):
+        try:
+            lang_code = settings.WHATSAPP_TEMPLATE_LANG_AR if is_ar else settings.WHATSAPP_TEMPLATE_LANG_EN
+            whatsapp.send_template(
+                entry["phone"],
+                settings.WHATSAPP_TEMPLATE_BOOKED,
+                lang_code,
+                [name, appt_id, when],
+            )
+        except Exception as e:
+            log.warning("WhatsApp notification failed for %s: %s", appt_id, e)

@@ -15,7 +15,7 @@ import logging
 import threading
 
 from app.config import settings
-from app import storage, email_util
+from app import storage, email_util, whatsapp
 
 log = logging.getLogger("perennia.nurture")
 
@@ -62,15 +62,19 @@ def _nurture_copy(lead: dict) -> tuple[str, str]:
 
 
 def run_once() -> int:
-    """Send the nurture email to every lead currently due one.
+    """Send the nurture follow-up (email and/or WhatsApp) to every lead
+    currently due one.
 
-    Returns the number actually sent. If SMTP isn't configured at all,
-    this deliberately does nothing and touches no lead records — so
-    once an admin sets SMTP_* later, the backlog sends on the next tick
-    instead of having been silently marked "attempted" while nothing
-    was ever configured to send it.
+    Returns the number of leads that got at least one channel delivered.
+    If neither channel is configured at all, this deliberately does
+    nothing and touches no lead records — so once an admin sets one up
+    later, the backlog sends on the next tick instead of having been
+    silently marked "attempted" while nothing was ever configured to
+    send it.
     """
-    if not settings.NURTURE_ENABLED or not email_util.is_configured():
+    email_ready = email_util.is_configured()
+    wa_ready = whatsapp.is_configured() and bool(settings.WHATSAPP_TEMPLATE_NURTURE)
+    if not settings.NURTURE_ENABLED or not (email_ready or wa_ready):
         return 0
 
     due = _due_leads()
@@ -86,22 +90,36 @@ def run_once() -> int:
         target = by_id.get(lead["id"])
         if target is None:
             continue
-        subject, body = _nurture_copy(lead)
-        ok = False
-        try:
-            ok = email_util.send_email(lead.get("email", ""), subject, body)
-        except Exception as e:
-            log.warning("Nurture email failed for lead %s: %s", lead.get("id"), e)
 
-        # Mark attempted either way, once SMTP is genuinely configured:
-        # a single stale/bouncing address shouldn't retry forever — one
-        # attempt is the whole design, not a retry queue.
+        ok_email = False
+        if email_ready:
+            subject, body = _nurture_copy(lead)
+            try:
+                ok_email = email_util.send_email(lead.get("email", ""), subject, body)
+            except Exception as e:
+                log.warning("Nurture email failed for lead %s: %s", lead.get("id"), e)
+
+        ok_wa = False
+        if wa_ready and lead.get("phone"):
+            lang_code = settings.WHATSAPP_TEMPLATE_LANG_AR if lead.get("lang") == "ar" else settings.WHATSAPP_TEMPLATE_LANG_EN
+            try:
+                ok_wa = whatsapp.send_template(
+                    lead["phone"], settings.WHATSAPP_TEMPLATE_NURTURE, lang_code, [lead.get("name", "")],
+                )
+            except Exception as e:
+                log.warning("Nurture WhatsApp failed for lead %s: %s", lead.get("id"), e)
+
+        # Mark attempted either way, once at least one channel is genuinely
+        # configured: a single stale/bouncing address or number shouldn't
+        # retry forever — one attempt is the whole design, not a retry queue.
         target["nurture_sent_at"] = now_iso
         target["status"] = "contacted"
+        channels = [c for c, ok in (("email", ok_email), ("WhatsApp", ok_wa)) if ok]
+        outcome = "sent via " + " + ".join(channels) if channels else "attempted, no channel delivered"
         existing_notes = target.get("notes") or ""
-        auto_note = f"[Auto] Follow-up email {'sent' if ok else 'attempted'} {now_iso}"
+        auto_note = f"[Auto] Follow-up {outcome} {now_iso}"
         target["notes"] = f"{existing_notes}\n{auto_note}" if existing_notes else auto_note
-        if ok:
+        if channels:
             sent += 1
 
     storage.save_leads(leads)

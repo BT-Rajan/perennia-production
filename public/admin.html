@@ -725,6 +725,7 @@
           <div class="card-lbl">Contact Information</div>
           <div class="frow"><label class="flabel">Email</label><input type="email" class="finput" id="ct-email" placeholder="info@perennia.com"></div>
           <div class="frow"><label class="flabel">Phone</label><input type="text" class="finput" id="ct-phone" placeholder="+965 0000 0000"></div>
+          <div class="frow"><label class="flabel">WhatsApp Number</label><input type="text" class="finput" id="ct-whatsapp" placeholder="+965 0000 0000 (leave blank to hide the WhatsApp button)"></div>
           <div class="twin">
             <div class="frow"><label class="flabel">Address <span class="badge ben">EN</span></label><input type="text" class="finput" id="ct-addr-en" placeholder="Kuwait City, Kuwait"></div>
             <div class="frow"><label class="flabel">Address <span class="badge bar">AR</span></label><input type="text" class="finput" id="ct-addr-ar" dir="rtl" placeholder="الكويت"></div>
@@ -1400,7 +1401,7 @@ async function saveBranding() {
 }
 
 // ── Contact ───────────────────────────────────────
-const CT_DEFAULTS = { 'ct-email':'info@perennia.com', 'ct-phone':'+965 0000 0000', 'ct-addr-en':'Kuwait', 'ct-addr-ar':'الكويت' };
+const CT_DEFAULTS = { 'ct-email':'info@perennia.com', 'ct-phone':'+965 0000 0000', 'ct-whatsapp':'', 'ct-addr-en':'Kuwait', 'ct-addr-ar':'الكويت' };
 
 function loadContact() {
   const saved = (serverConfig && serverConfig.contact) || {};
