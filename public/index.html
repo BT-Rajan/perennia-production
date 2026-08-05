@@ -902,6 +902,26 @@ main.chat-main {
               </div>
             </div>
 
+            <!-- ─── Lead gate — visitor must share contact details before the
+                 conversation unlocks. Reuses .booking-panel's exact overlay
+                 pattern (same absolute-inset-blur-backdrop mechanism), so no
+                 new overlay CSS is needed and it visually/functionally blocks
+                 the messages, chips, and input beneath it while open. ─── -->
+            <div class="booking-panel" id="lead-gate-panel" style="z-index:25">
+              <div class="booking-badge">👋</div>
+              <h3 id="lg-title">Before we start</h3>
+              <p id="lg-sub">Share your details so we can follow up if we get disconnected.</p>
+              <div class="booking-head-divider"></div>
+
+              <div class="bk-field"><label id="lg-lbl-name">Name</label><input id="lg-name" type="text" maxlength="120" autocomplete="name"></div>
+              <div class="bk-field"><label id="lg-lbl-email">Email</label><input id="lg-email" type="email" autocomplete="email"></div>
+              <div class="bk-field"><label id="lg-lbl-phone">Phone</label><input id="lg-phone" type="tel" autocomplete="tel"></div>
+              <div class="bk-err" id="lg-err"></div>
+              <div class="booking-foot">
+                <button class="send-btn-wide" id="lg-submit-btn" onclick="submitLeadGate()" style="flex:1">Start Chatting</button>
+              </div>
+            </div>
+
             <!-- ─── Talk to Us — lives inside the chat shell itself, synced with the
                  conversation (same session, posts its result back into the transcript) ─── -->
             <div class="booking-panel" id="booking-panel">
@@ -1166,6 +1186,14 @@ const COPY = {
     bkCancelConfirm: 'Are you sure you want to cancel this appointment?',
     bkCancelSuccess: (label, id) => `Appointment <strong>${id}</strong> (${label}) has been cancelled. A confirmation email is on its way.`,
     bkRescheduleSuccess: (label, id) => `Appointment <strong>${id}</strong> has been moved to <strong>${label}</strong>. A confirmation email is on its way.`,
+    lgTitle: 'Before we start',
+    lgSub: "Share your details so we can follow up if we get disconnected.",
+    lgName: 'Name', lgEmail: 'Email', lgPhone: 'Phone',
+    lgSubmit: 'Start Chatting', lgSubmitting: 'One moment…',
+    lgErrName: 'Please enter your name.',
+    lgErrEmail: 'Please enter a valid email address.',
+    lgErrPhone: 'Please enter a valid phone number.',
+    lgErrGeneric: 'Something went wrong. Please try again.',
     apptSummary: (a) => {
       const dt = new Date(a.start);
       const when = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' at ' +
@@ -1227,6 +1255,14 @@ const COPY = {
     bkCancelConfirm: 'هل أنت متأكد أنك تريد إلغاء هذا الموعد؟',
     bkCancelSuccess: (label, id) => `تم إلغاء الموعد <strong>${id}</strong> (${label}). ستصلك رسالة تأكيد قريباً.`,
     bkRescheduleSuccess: (label, id) => `تم نقل الموعد <strong>${id}</strong> إلى <strong>${label}</strong>. ستصلك رسالة تأكيد قريباً.`,
+    lgTitle: 'قبل أن نبدأ',
+    lgSub: 'شاركنا بياناتك لنتمكن من التواصل معك في حال انقطع الاتصال.',
+    lgName: 'الاسم', lgEmail: 'البريد الإلكتروني', lgPhone: 'رقم الهاتف',
+    lgSubmit: 'ابدأ المحادثة', lgSubmitting: 'لحظات…',
+    lgErrName: 'يرجى إدخال اسمك.',
+    lgErrEmail: 'يرجى إدخال بريد إلكتروني صحيح.',
+    lgErrPhone: 'يرجى إدخال رقم هاتف صحيح.',
+    lgErrGeneric: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
     apptSummary: (a) => {
       const dt = new Date(a.start);
       const when = dt.toLocaleDateString('ar', { weekday: 'long', month: 'long', day: 'numeric' }) + ' الساعة ' +
@@ -1260,6 +1296,9 @@ let busy = false;
 let aiAvatarSrc = null;
 let sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
 let chatLocked = false;
+let leadId = '';
+let leadCaptured = false;
+const LG_PHONE_RE = /^[0-9+()\-\s]{6,25}$/;
 let chatOpen = false;
 let appointmentBooked = false;
 let pickedSlot = null;
@@ -1492,7 +1531,13 @@ function openChat() {
   const el = document.getElementById('chat-page');
   el.style.display = 'flex';
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('active')));
-  setTimeout(() => document.getElementById('input').focus(), 400);
+  if (!leadCaptured) {
+    lgText();
+    document.getElementById('lead-gate-panel').classList.add('open');
+    setTimeout(() => document.getElementById('lg-name')?.focus(), 400);
+  } else {
+    setTimeout(() => document.getElementById('input').focus(), 400);
+  }
 }
 
 function closeChat() {
@@ -1744,6 +1789,54 @@ function fmtWhen(iso, label) {
   return `${datePart} · ${timePart}`;
 }
 
+// ── Lead gate — one-time contact capture before the first message ──
+function lgText() {
+  const c = COPY[lang];
+  document.getElementById('lg-title').textContent = c.lgTitle;
+  document.getElementById('lg-sub').textContent = c.lgSub;
+  document.getElementById('lg-lbl-name').textContent = c.lgName;
+  document.getElementById('lg-lbl-email').textContent = c.lgEmail;
+  document.getElementById('lg-lbl-phone').textContent = c.lgPhone;
+  document.getElementById('lg-submit-btn').textContent = c.lgSubmit;
+  document.getElementById('lg-err').textContent = '';
+}
+
+async function submitLeadGate() {
+  const c = COPY[lang];
+  const errEl = document.getElementById('lg-err');
+  const name = document.getElementById('lg-name').value.trim();
+  const email = document.getElementById('lg-email').value.trim();
+  const phone = document.getElementById('lg-phone').value.trim();
+
+  if (!name) { errEl.textContent = c.lgErrName; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = c.lgErrEmail; return; }
+  if (!LG_PHONE_RE.test(phone)) { errEl.textContent = c.lgErrPhone; return; }
+  errEl.textContent = '';
+
+  const btn = document.getElementById('lg-submit-btn');
+  btn.disabled = true;
+  btn.textContent = c.lgSubmitting;
+
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone, lang })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || c.lgErrGeneric);
+
+    leadId = data.leadId || '';
+    leadCaptured = true;
+    document.getElementById('lead-gate-panel').classList.remove('open');
+    document.getElementById('input').focus();
+  } catch (e) {
+    errEl.textContent = e.message || c.lgErrGeneric;
+  }
+  btn.disabled = false;
+  btn.textContent = c.lgSubmit;
+}
+
 function bkText() {
   const c = COPY[lang];
   document.getElementById('bk-title').textContent = c.bkTitle;
@@ -1812,6 +1905,11 @@ function openBooking() {
   switchBkTab('new');
   document.getElementById('bk-err').textContent = '';
   resetNewApptView();
+  if (leadCaptured) {
+    document.getElementById('bk-name').value = document.getElementById('lg-name').value.trim();
+    document.getElementById('bk-email').value = document.getElementById('lg-email').value.trim();
+    document.getElementById('bk-phone').value = document.getElementById('lg-phone').value.trim();
+  }
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById('bk-date').min = today;
   document.getElementById('bk-re-date').min = today;
@@ -1879,6 +1977,7 @@ async function submitBooking() {
         start: pickedSlot.start,
         end: pickedSlot.end,
         lang,
+        leadId,
       })
     });
     const data = await res.json().catch(() => ({}));

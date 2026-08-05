@@ -61,8 +61,9 @@
 
     .field { margin-bottom: 1rem; }
     .field label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--navy); margin-bottom: 0.35rem; letter-spacing: 0.04em; }
-    .field input { width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.88rem; color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.18s; }
-    .field input:focus { border-color: var(--navy); background: #fff; }
+    .field input, .field select, .field textarea { width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.88rem; color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.18s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--navy); background: #fff; }
+    .field textarea { resize: vertical; min-height: 70px; }
 
     .login-error { display: none; background: #fef2f2; border: 1px solid #fecaca; color: var(--red); border-radius: var(--radius); padding: 0.6rem 0.85rem; font-size: 0.8rem; margin-bottom: 1rem; }
 
@@ -183,6 +184,8 @@
     .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .pill-ok   { background: #dcfce7; color: #15803d; }
     .pill-warn { background: #fef9c3; color: #a16207; }
+    .pill-info { background: #dbeafe; color: #1d4ed8; }
+    .pill-bad  { background: #fee2e2; color: #b91c1c; }
 
     /* Summary bar */
     .sum-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding: 0.9rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.1rem; box-shadow: var(--shadow); }
@@ -207,11 +210,26 @@
 
     /* Knowledge-base file list */
     .kb-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; background: #fafaf8; border: 1px solid var(--border); border-radius: var(--radius); }
+    .kb-item.clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .kb-item.clickable:hover { border-color: var(--navy); background: #fff; }
     .kb-item-name { font-size: 0.8rem; font-weight: 600; color: var(--navy); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .kb-item-meta { font-size: 0.68rem; color: var(--muted); flex-shrink: 0; }
     .kb-item-del { flex-shrink: 0; background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--red); font-family: inherit; font-size: 0.7rem; font-weight: 600; padding: 0.3rem 0.6rem; cursor: pointer; transition: all 0.15s; }
     .kb-item-del:hover { background: #fef2f2; border-color: #fecaca; }
     .kb-empty { font-size: 0.78rem; color: var(--muted); padding: 0.5rem 0.1rem; }
+
+    /* Modal (lead / appointment detail) */
+    .modal-back { display: none; position: fixed; inset: 0; background: rgba(5,33,75,0.35); backdrop-filter: blur(2px); z-index: 200; align-items: center; justify-content: center; padding: 1.5rem; }
+    .modal-back.show { display: flex; }
+    .modal { background: #fff; border-radius: 14px; width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; box-shadow: 0 24px 70px rgba(0,0,0,0.3); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: #fff; }
+    .modal-head h3 { font-size: 1rem; color: var(--navy); }
+    .modal-x { background: none; border: none; font-size: 1rem; color: var(--muted); cursor: pointer; line-height: 1; padding: 0.2rem; }
+    .modal-x:hover { color: var(--navy); }
+    .modal-body { padding: 1.2rem 1.4rem; }
+    .modal-foot { display: flex; gap: 0.6rem; justify-content: flex-end; padding: 1rem 1.4rem; border-top: 1px solid var(--border); }
+    .modal-sub { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 1.1rem 0 0.6rem; }
+    .modal-sub:first-child { margin-top: 0; }
 
     /* Dashboard tiles */
     .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin-bottom: 1.25rem; }
@@ -314,6 +332,10 @@
         Logo Upload
       </a>
       <div class="sb-section">Engagement</div>
+      <a class="sb-item" data-p="leads" onclick="go(this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Leads
+      </a>
       <a class="sb-item" data-p="appt" onclick="go(this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Appointments
@@ -377,6 +399,11 @@
             <div class="d-icon">🖼️</div>
             <div class="d-name">Logo Upload</div>
             <div class="d-desc" id="d-logo">No logo uploaded</div>
+          </div>
+          <div class="dash-tile" onclick="navTo('leads')">
+            <div class="d-icon">🧲</div>
+            <div class="d-name">Leads</div>
+            <div class="d-desc" id="d-leads">No leads yet</div>
           </div>
           <div class="dash-tile" onclick="navTo('appt')">
             <div class="d-icon">📅</div>
@@ -752,6 +779,18 @@
       </div>
 
       <!-- ENGAGEMENT: appointments + daily interaction summary -->
+      <!-- LEADS -->
+      <div class="panel" id="p-leads">
+        <div class="ph"><h1>Leads</h1><p>Visitors who shared their details before chatting.</p></div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-lbl">All Leads</div>
+          <div class="kb-list" id="leads-list" style="display:flex;flex-direction:column;gap:0.5rem">
+            <div class="kb-empty">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPOINTMENTS -->
       <div class="panel" id="p-appt">
         <div class="ph"><h1>Appointments</h1><p>Visitor bookings and day-by-day chat activity.</p></div>
 
@@ -783,6 +822,20 @@
 </div><!-- /app -->
 
 <div id="toast"></div>
+
+<!-- Shared modal: lead detail / appointment detail. One instance, contents
+     swapped in by openLeadModal()/openApptModal() — avoids maintaining two
+     near-identical modals with duplicate markup. -->
+<div class="modal-back" id="modal-back" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Details</h3>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
 
 <script>
 /* ════════════════════════════════════════════════
@@ -851,7 +904,7 @@ async function adminFetch(url, options = {}) {
 document.getElementById('lp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 // ── Navigation ────────────────────────────────────
-const TITLES = { dash:'Dashboard', ai:'Provider & Model', assistant:'Persona & Files', branding:'Branding & Copy', chat:'Chat Knowledge', contact:'Contact Details', logo:'Logo Upload', appt:'Appointments' };
+const TITLES = { dash:'Dashboard', ai:'Provider & Model', assistant:'Persona & Files', branding:'Branding & Copy', chat:'Chat Knowledge', contact:'Contact Details', logo:'Logo Upload', leads:'Leads', appt:'Appointments' };
 
 function go(el) {
   event?.preventDefault();
@@ -1520,16 +1573,17 @@ async function loadAppointments() {
   const listEl = document.getElementById('appt-list');
   try {
     const res = await adminFetch('/api/admin/appointments');
-    const entries = await res.json();
-    if (!entries.length) {
+    apptsCache = await res.json();
+    if (!apptsCache.length) {
       listEl.innerHTML = '<div class="kb-empty">No appointments booked yet.</div>';
       return;
     }
     listEl.innerHTML = '';
-    entries.forEach(a => {
+    apptsCache.forEach(a => {
       const cancelled = a.status === 'cancelled';
       const row = document.createElement('div');
-      row.className = 'kb-item';
+      row.className = 'kb-item clickable';
+      row.onclick = () => openApptModal(a.id);
       row.innerHTML = `
         <span class="kb-item-name" style="flex:1 1 160px">${a.name}${cancelled ? ' (cancelled)' : ''}</span>
         <span class="kb-item-meta">${fmtApptTime(a.start)}</span>
@@ -1540,7 +1594,7 @@ async function loadAppointments() {
         const btn = document.createElement('button');
         btn.className = 'kb-item-del';
         btn.textContent = 'Cancel';
-        btn.onclick = () => cancelAppointment(a.id);
+        btn.onclick = (e) => { e.stopPropagation(); cancelAppointment(a.id); };
         row.appendChild(btn);
       }
       listEl.appendChild(row);
@@ -1558,10 +1612,239 @@ async function cancelAppointment(id) {
       body: JSON.stringify({ id })
     });
     toast('✔ Appointment cancelled', 'ok');
+    closeModal();
     loadAppointments();
     loadAnalytics();
   } catch (e) {
     toast(`✗ ${e.message || 'Could not cancel'}`, 'err');
+  }
+}
+
+// ── Shared modal (lead detail / appointment detail) ────────────────
+function openModal(title) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-back').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-back').classList.remove('show');
+  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('modal-foot').innerHTML = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── Leads ────────────────────────────────────────
+const LEAD_STATUS_META = {
+  new:       { label: 'New',       pill: 'pill-warn' },
+  contacted: { label: 'Contacted', pill: 'pill-info' },
+  booked:    { label: 'Booked',    pill: 'pill-ok' },
+  lost:      { label: 'Lost',      pill: 'pill-bad' },
+};
+let leadsCache = [];
+let apptsCache = [];
+
+function fmtLeadTime(iso) {
+  try { return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  catch { return iso; }
+}
+
+async function loadLeads() {
+  const listEl = document.getElementById('leads-list');
+  const tile = document.getElementById('d-leads');
+  try {
+    const res = await adminFetch('/api/admin/leads');
+    leadsCache = await res.json();
+    if (tile) tile.textContent = leadsCache.length ? `${leadsCache.length} captured` : 'No leads yet';
+    if (!leadsCache.length) {
+      listEl.innerHTML = '<div class="kb-empty">No leads yet — they\'ll appear here as visitors start chatting.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    leadsCache.forEach(l => {
+      const meta = LEAD_STATUS_META[l.status] || LEAD_STATUS_META.new;
+      const row = document.createElement('div');
+      row.className = 'kb-item clickable';
+      row.onclick = () => openLeadModal(l.id);
+      row.innerHTML = `
+        <span class="kb-item-name" style="flex:1 1 160px">${l.name}</span>
+        <span class="kb-item-meta">${l.email}</span>
+        <span class="kb-item-meta">${l.phone}</span>
+        <span class="kb-item-meta">${fmtLeadTime(l.created_at)}</span>
+        <span class="pill ${meta.pill}"><span class="dot"></span> ${meta.label}</span>
+      `;
+      listEl.appendChild(row);
+    });
+  } catch {
+    listEl.innerHTML = '<div class="kb-empty">Could not load leads.</div>';
+  }
+}
+
+function openLeadModal(id) {
+  const l = leadsCache.find(x => x.id === id);
+  if (!l) return;
+  openModal(`Lead — ${l.name}`);
+
+  const linkedAppt = l.appointment_id ? apptsCache.find(a => a.id === l.appointment_id) : null;
+  const attachSection = linkedAppt
+    ? `<div class="modal-sub">Attached Appointment</div>
+       <div class="kb-item clickable" onclick="closeModal();openApptModal('${linkedAppt.id}')">
+         <span class="kb-item-name">${fmtApptTime(linkedAppt.start)}</span>
+         <span class="kb-item-meta">${linkedAppt.id}</span>
+       </div>
+       <button class="btn-2" style="margin-top:0.6rem" onclick="detachApptFromLead('${l.id}')">Detach appointment</button>`
+    : `<div class="modal-sub">Attach Appointment</div>
+       <div class="field" style="display:flex; gap:0.5rem; align-items:flex-end; margin-bottom:0">
+         <div style="flex:1"><label>Appointment ID</label><input id="lead-attach-id" placeholder="PRN-XXXXXXXX"></div>
+         <button class="btn-2" onclick="attachApptToLead('${l.id}')">Attach</button>
+       </div>`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="field"><label>Name</label><input id="lead-name" value="${l.name.replace(/"/g, '&quot;')}"></div>
+    <div class="field"><label>Email</label><input id="lead-email" type="email" value="${l.email.replace(/"/g, '&quot;')}"></div>
+    <div class="field"><label>Phone</label><input id="lead-phone" value="${l.phone.replace(/"/g, '&quot;')}"></div>
+    <div class="field"><label>Status</label>
+      <select id="lead-status">
+        ${Object.entries(LEAD_STATUS_META).map(([k, m]) => `<option value="${k}" ${l.status===k?'selected':''}>${m.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:0"><label>Notes</label><textarea id="lead-notes" rows="3">${(l.notes||'').replace(/</g,'&lt;')}</textarea></div>
+    ${attachSection}
+  `;
+  document.getElementById('modal-foot').innerHTML = `
+    <button class="btn-2" onclick="closeModal()">Cancel</button>
+    <button class="btn-save" onclick="saveLeadEdit('${l.id}')">Save</button>
+  `;
+}
+
+async function saveLeadEdit(id) {
+  try {
+    await adminFetch('/api/admin/leads/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name: document.getElementById('lead-name').value.trim(),
+        email: document.getElementById('lead-email').value.trim(),
+        phone: document.getElementById('lead-phone').value.trim(),
+        status: document.getElementById('lead-status').value,
+        notes: document.getElementById('lead-notes').value,
+      })
+    });
+    toast('✔ Lead saved', 'ok');
+    closeModal();
+    loadLeads();
+  } catch (e) {
+    toast(`✗ ${e.message || 'Could not save lead'}`, 'err');
+  }
+}
+
+async function attachApptToLead(leadId) {
+  const apptId = document.getElementById('lead-attach-id').value.trim();
+  if (!apptId) { toast('Enter an appointment ID first.', 'err'); return; }
+  try {
+    await adminFetch('/api/admin/leads/attach-appointment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: leadId, appointmentId: apptId })
+    });
+    toast('✔ Appointment attached', 'ok');
+    closeModal();
+    await Promise.all([loadLeads(), loadAppointments()]);
+  } catch (e) {
+    toast(`✗ ${e.message || 'Could not attach appointment'}`, 'err');
+  }
+}
+
+async function detachApptFromLead(leadId) {
+  try {
+    await adminFetch('/api/admin/leads/detach-appointment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: leadId })
+    });
+    toast('✔ Appointment detached', 'ok');
+    closeModal();
+    await Promise.all([loadLeads(), loadAppointments()]);
+  } catch (e) {
+    toast(`✗ ${e.message || 'Could not detach appointment'}`, 'err');
+  }
+}
+
+// ── Appointment detail / edit ────────────────────
+function openApptModal(id) {
+  const a = apptsCache.find(x => x.id === id);
+  if (!a) return;
+  const cancelled = a.status === 'cancelled';
+  openModal(`Appointment — ${a.id}`);
+
+  const linkedLead = a.lead_id ? leadsCache.find(l => l.id === a.lead_id) : null;
+  const leadSection = linkedLead
+    ? `<div class="modal-sub">From Lead</div>
+       <div class="kb-item clickable" onclick="closeModal();openLeadModal('${linkedLead.id}')">
+         <span class="kb-item-name">${linkedLead.name}</span>
+         <span class="kb-item-meta">${linkedLead.email}</span>
+       </div>`
+    : `<div class="modal-sub">Attach Lead</div>
+       <div class="field" style="display:flex; gap:0.5rem; align-items:flex-end; margin-bottom:0">
+         <div style="flex:1"><label>Lead ID</label><input id="appt-attach-lead-id" placeholder="LD-XXXXXXXX"></div>
+         <button class="btn-2" onclick="attachLeadToAppt('${a.id}')">Attach</button>
+       </div>`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-sub">When</div>
+    <div class="kb-item"><span class="kb-item-name">${fmtApptTime(a.start)}</span>${cancelled ? '<span class="pill pill-bad"><span class="dot"></span> Cancelled</span>' : '<span class="pill pill-ok"><span class="dot"></span> Confirmed</span>'}</div>
+    <div class="modal-sub">Contact</div>
+    <div class="field"><label>Name</label><input id="appt-name" value="${a.name.replace(/"/g, '&quot;')}" ${cancelled?'disabled':''}></div>
+    <div class="field"><label>Email</label><input id="appt-email" type="email" value="${a.email.replace(/"/g, '&quot;')}" ${cancelled?'disabled':''}></div>
+    <div class="field"><label>Phone</label><input id="appt-phone" value="${(a.phone||'').replace(/"/g, '&quot;')}" ${cancelled?'disabled':''}></div>
+    <div class="field"><label>Service interest</label><input id="appt-service" value="${(a.service||'').replace(/"/g, '&quot;')}" ${cancelled?'disabled':''}></div>
+    <div class="field" style="margin-bottom:0"><label>Notes</label><textarea id="appt-notes" rows="3" ${cancelled?'disabled':''}>${(a.notes||'').replace(/</g,'&lt;')}</textarea></div>
+    ${leadSection}
+  `;
+  document.getElementById('modal-foot').innerHTML = cancelled
+    ? `<button class="btn-2" onclick="closeModal()">Close</button>`
+    : `<button class="kb-item-del" style="padding:0.65rem 1.25rem" onclick="cancelAppointment('${a.id}')">Cancel Appointment</button>
+       <button class="btn-2" onclick="closeModal()">Close</button>
+       <button class="btn-save" onclick="saveApptEdit('${a.id}')">Save</button>`;
+}
+
+async function saveApptEdit(id) {
+  try {
+    await adminFetch('/api/admin/appointments/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name: document.getElementById('appt-name').value.trim(),
+        email: document.getElementById('appt-email').value.trim(),
+        phone: document.getElementById('appt-phone').value.trim(),
+        service: document.getElementById('appt-service').value.trim(),
+        notes: document.getElementById('appt-notes').value,
+      })
+    });
+    toast('✔ Appointment saved', 'ok');
+    closeModal();
+    loadAppointments();
+  } catch (e) {
+    toast(`✗ ${e.message || 'Could not save appointment'}`, 'err');
+  }
+}
+
+async function attachLeadToAppt(apptId) {
+  const leadId = document.getElementById('appt-attach-lead-id').value.trim();
+  if (!leadId) { toast('Enter a lead ID first.', 'err'); return; }
+  try {
+    await adminFetch('/api/admin/leads/attach-appointment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: leadId, appointmentId: apptId })
+    });
+    toast('✔ Lead attached', 'ok');
+    closeModal();
+    await Promise.all([loadLeads(), loadAppointments()]);
+  } catch (e) {
+    toast(`✗ ${e.message || 'Could not attach lead'}`, 'err');
   }
 }
 
@@ -1583,6 +1866,7 @@ async function init() {
   loadLogos();
   loadAnalytics();
   loadAppointments();
+  loadLeads();
 }
 
 window.addEventListener('DOMContentLoaded', async () => {

@@ -27,6 +27,7 @@ BOOKING_LOCK = threading.Lock()
 CONFIG_PATH = settings.DATA_DIR / "config.json"
 KB_PATH = settings.DATA_DIR / "knowledge_base.json"
 APPT_PATH = settings.DATA_DIR / "appointments.json"
+LEADS_PATH = settings.DATA_DIR / "leads.json"
 STATS_PATH = settings.DATA_DIR / "daily_stats.json"
 STATS_RETENTION_DAYS = 90
 
@@ -211,6 +212,34 @@ def add_appointment(entry: dict[str, Any]) -> dict[str, Any]:
     entries = load_appointments()
     entries.append(entry)
     save_appointments(entries)
+    return entry
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Leads (contact details captured before a visitor starts chatting)
+# ═══════════════════════════════════════════════════════════════════
+
+def load_leads() -> list[dict[str, Any]]:
+    with _lock:
+        if not LEADS_PATH.exists():
+            return []
+        try:
+            with open(LEADS_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return []
+        return data if isinstance(data, list) else []
+
+
+def save_leads(entries: list[dict[str, Any]]) -> None:
+    with _lock:
+        _atomic_write_json(LEADS_PATH, entries)
+
+
+def add_lead(entry: dict[str, Any]) -> dict[str, Any]:
+    entries = load_leads()
+    entries.append(entry)
+    save_leads(entries)
     return entry
 
 

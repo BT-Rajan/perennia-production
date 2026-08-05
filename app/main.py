@@ -239,6 +239,53 @@ async def chat(request: Request, body: ChatRequest):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# Public: leads — a visitor's contact details, captured once before
+# their first chat message. Deliberately minimal (name/email/phone
+# only): this is a capture point, not a transcript logger.
+# ═══════════════════════════════════════════════════════════════════
+
+class LeadRequest(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    lang: str = "en"
+
+    @field_validator("name")
+    @classmethod
+    def _v_name(cls, v: str) -> str:
+        v = v.strip()
+        if not NAME_RE.match(v):
+            raise ValueError("Invalid name.")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def _v_phone(cls, v: str) -> str:
+        v = v.strip()
+        if not PHONE_RE.match(v):
+            raise ValueError("Invalid phone number.")
+        return v
+
+
+@app.post("/api/leads")
+@limiter.limit(settings.RATE_LIMIT_CHAT)
+async def create_lead(request: Request, body: LeadRequest):
+    entry = {
+        "id": f"LD-{uuid.uuid4().hex[:8].upper()}",
+        "name": body.name,
+        "email": str(body.email),
+        "phone": body.phone,
+        "lang": "ar" if body.lang == "ar" else "en",
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "status": "new",        # new → contacted → booked / lost
+        "notes": "",
+        "appointment_id": None,
+    }
+    storage.add_lead(entry)
+    return {"ok": True, "leadId": entry["id"]}
+
+
+# ═══════════════════════════════════════════════════════════════════
 # Public: appointment booking — visitor-facing, no auth required.
 # Availability is always recomputed server-side; the client can never
 # force a double-booking by racing two requests (checked again at book
@@ -268,6 +315,7 @@ class BookAppointmentRequest(BaseModel):
     start: str
     end: str
     lang: str = "en"
+    leadId: str = Field(default="", max_length=64)
 
     @field_validator("name")
     @classmethod
@@ -313,6 +361,18 @@ async def book_appointment(request: Request, body: BookAppointmentRequest):
             summary=summary, description=description, start=start_dt, end=end_dt, attendee_email=body.email,
         )
 
+        # If this booking came from a gated chat session, resolve the lead
+        # now so its ID can be written into the appointment record itself
+        # (not patched in afterward — add_appointment() below writes to
+        # disk immediately, so anything set on `entry` after that call
+        # would silently never be saved).
+        lead_id = body.leadId.strip()
+        linked_lead_idx = None
+        leads = None
+        if lead_id:
+            leads = storage.load_leads()
+            linked_lead_idx = next((i for i, l in enumerate(leads) if l.get("id") == lead_id), None)
+
         entry = {
             "id": f"PRN-{uuid.uuid4().hex[:8].upper()}",
             "name": body.name,
@@ -326,9 +386,17 @@ async def book_appointment(request: Request, body: BookAppointmentRequest):
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "calendar_event_id": event_id,
             "status": "confirmed",
+            "lead_id": lead_id if linked_lead_idx is not None else None,
         }
         storage.add_appointment(entry)
         storage.record_appointment_stat(start_dt.date().isoformat())
+
+        # Same-direction link kept on both records so either can be opened
+        # from the other in the admin panel.
+        if linked_lead_idx is not None:
+            leads[linked_lead_idx]["appointment_id"] = entry["id"]
+            leads[linked_lead_idx]["status"] = "booked"
+            storage.save_leads(leads)
 
     # Email confirmations never block the booking response — SMTP can be
     # slow or briefly unreachable, and the appointment is already saved.
@@ -871,3 +939,191 @@ async def analytics_daily(session: dict = Depends(get_session), days: int = 14):
         "calendarConfigured": gcal.is_configured(),
         "maxTurns": settings.MAX_CHAT_EXCHANGES,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin: leads
+# ═══════════════════════════════════════════════════════════════════
+
+LEAD_STATUSES = {"new", "contacted", "booked", "lost"}
+
+
+@app.get("/api/admin/leads")
+async def list_leads(session: dict = Depends(get_session)):
+    return sorted(storage.load_leads(), key=lambda l: l.get("created_at", ""), reverse=True)
+
+
+class LeadUpdateRequest(BaseModel):
+    id: str
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+    @field_validator("name")
+    @classmethod
+    def _v_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not NAME_RE.match(v):
+            raise ValueError("Invalid name.")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def _v_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if v and not PHONE_RE.match(v):
+            raise ValueError("Invalid phone number.")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def _v_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in LEAD_STATUSES:
+            raise ValueError("Invalid status.")
+        return v
+
+
+@app.post("/api/admin/leads/update")
+async def update_lead(body: LeadUpdateRequest, session: dict = Depends(require_csrf)):
+    entries = storage.load_leads()
+    idx = next((i for i, l in enumerate(entries) if l.get("id") == body.id), None)
+    if idx is None:
+        raise HTTPException(404, "Lead not found.")
+    entry = entries[idx]
+    if body.name is not None:
+        entry["name"] = body.name
+    if body.email is not None:
+        entry["email"] = str(body.email)
+    if body.phone is not None:
+        entry["phone"] = body.phone
+    if body.status is not None:
+        entry["status"] = body.status
+    if body.notes is not None:
+        entry["notes"] = body.notes
+    storage.save_leads(entries)
+    return entry
+
+
+class LeadAttachRequest(BaseModel):
+    id: str
+    appointmentId: str
+
+
+@app.post("/api/admin/leads/attach-appointment")
+async def attach_lead_appointment(body: LeadAttachRequest, session: dict = Depends(require_csrf)):
+    leads = storage.load_leads()
+    lidx = next((i for i, l in enumerate(leads) if l.get("id") == body.id), None)
+    if lidx is None:
+        raise HTTPException(404, "Lead not found.")
+    appts = storage.load_appointments()
+    aidx = next((i for i, a in enumerate(appts) if a.get("id") == body.appointmentId), None)
+    if aidx is None:
+        raise HTTPException(404, "Appointment not found.")
+
+    # Keep the link one-to-one in both directions: clear any other lead
+    # that pointed at this appointment, and clear this lead's *previous*
+    # appointment (if any) so it doesn't keep a stale back-reference.
+    for l in leads:
+        if l.get("appointment_id") == appts[aidx]["id"]:
+            l["appointment_id"] = None
+            if l.get("status") == "booked":
+                l["status"] = "contacted"
+    prev_appt_id = leads[lidx].get("appointment_id")
+    if prev_appt_id and prev_appt_id != appts[aidx]["id"]:
+        for a in appts:
+            if a.get("id") == prev_appt_id:
+                a["lead_id"] = None
+
+    leads[lidx]["appointment_id"] = appts[aidx]["id"]
+    leads[lidx]["status"] = "booked"
+    appts[aidx]["lead_id"] = leads[lidx]["id"]
+    storage.save_leads(leads)
+    storage.save_appointments(appts)
+    return leads[lidx]
+
+
+class LeadDetachRequest(BaseModel):
+    id: str
+
+
+@app.post("/api/admin/leads/detach-appointment")
+async def detach_lead_appointment(body: LeadDetachRequest, session: dict = Depends(require_csrf)):
+    leads = storage.load_leads()
+    lidx = next((i for i, l in enumerate(leads) if l.get("id") == body.id), None)
+    if lidx is None:
+        raise HTTPException(404, "Lead not found.")
+    appt_id = leads[lidx].get("appointment_id")
+    leads[lidx]["appointment_id"] = None
+    if leads[lidx].get("status") == "booked":
+        leads[lidx]["status"] = "contacted"
+    storage.save_leads(leads)
+    if appt_id:
+        appts = storage.load_appointments()
+        for a in appts:
+            if a.get("id") == appt_id:
+                a["lead_id"] = None
+        storage.save_appointments(appts)
+    return leads[lidx]
+
+
+class AppointmentUpdateRequest(BaseModel):
+    id: str
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    service: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+    @field_validator("name")
+    @classmethod
+    def _v_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not NAME_RE.match(v):
+            raise ValueError("Invalid name.")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def _v_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if v and not PHONE_RE.match(v):
+            raise ValueError("Invalid phone number.")
+        return v
+
+
+@app.post("/api/admin/appointments/update")
+async def update_appointment(body: AppointmentUpdateRequest, session: dict = Depends(require_csrf)):
+    # Deliberately doesn't touch start/end/status: rescheduling has to go
+    # through scheduling.slot_is_available() to avoid double-booking, and
+    # cancelling has to go through cancel_appointment() so the calendar
+    # event is removed and the cancellation email still fires. This is
+    # for correcting contact details / service / notes, not the slot.
+    entries = storage.load_appointments()
+    idx = next((i for i, a in enumerate(entries) if a.get("id") == body.id), None)
+    if idx is None:
+        raise HTTPException(404, "Appointment not found.")
+    entry = entries[idx]
+    if entry.get("status") == "cancelled":
+        raise HTTPException(409, "Cancelled appointments can't be edited.")
+    if body.name is not None:
+        entry["name"] = body.name
+    if body.email is not None:
+        entry["email"] = str(body.email)
+    if body.phone is not None:
+        entry["phone"] = body.phone
+    if body.service is not None:
+        entry["service"] = body.service
+    if body.notes is not None:
+        entry["notes"] = body.notes
+    storage.save_appointments(entries)
+    return entry
