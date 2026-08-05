@@ -152,6 +152,7 @@
     .btn-save:hover { background: var(--navy-deep); }
     .btn-2 { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.25rem; background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.82rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.18s; }
     .btn-2:hover { border-color: var(--navy); color: var(--navy); }
+    .btn-2:disabled, .btn-save:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
     .btn-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 
     /* Provider grid */
@@ -240,7 +241,6 @@
     .wiz-footer { display: none; position: fixed; left: var(--sidebar); right: 0; bottom: 0; z-index: 60; background: rgba(240,239,235,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 0.9rem 1.75rem; justify-content: space-between; align-items: center; }
     body.wizard-mode .wiz-footer { display: flex; }
     body.wizard-mode .wiz-bar { display: block; }
-    @media (max-width: 680px) { .wiz-footer { left: 0; } }
 
     /* Toast */
     #toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(12px); background: #111; color: #fff; padding: 0.6rem 1.4rem; border-radius: 100px; font-size: 0.82rem; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.25s ease; white-space: nowrap; z-index: 1000; }
@@ -385,14 +385,8 @@
           </div>
         </div>
         <div class="sum-bar">
-          <div><div class="sum-text">New here?</div><div class="sum-sub">Walk through provider, branding, persona, knowledge, contact & logo in one guided flow.</div></div>
+          <div><div class="sum-text">New here?</div><div class="sum-sub">Run the Setup Wizard to set your AI provider, branding, persona, knowledge, contact & logo in one guided flow.</div></div>
           <button class="btn-save" onclick="startWizard()">Start Setup Wizard</button>
-        </div>
-        <div class="info">
-          <strong>Getting started:</strong><br>
-          1. Go to <strong>Provider & Model</strong> — add your API key so the chat works.<br>
-          2. Go to <strong>Logo Upload</strong> — upload your English and Arabic logos.<br>
-          3. Click <strong>Open Website</strong> to see it live.
         </div>
       </div>
 
@@ -909,7 +903,11 @@ function showWizardStep() {
 
 async function wizardNext() {
   const step = WIZARD_STEPS[wizardIdx];
-  if (step.save) { try { await step.save(); } catch {} }
+  if (step.save) {
+    let ok = true;
+    try { ok = await step.save(); } catch { ok = false; }
+    if (ok === false) return; // save blocked or failed — stay on this step, toast already shown
+  }
   if (wizardIdx === WIZARD_STEPS.length - 1) {
     exitWizard();
     toast('✔ Setup complete', 'ok');
@@ -1076,7 +1074,7 @@ async function saveAI() {
 
   if (!serverConfig?.apiKeySet && !typedKey) {
     toast('Enter an API key first.', 'err');
-    return;
+    return false;
   }
 
   const p = prov();
@@ -1094,8 +1092,10 @@ async function saveAI() {
     await patchConfig(payload);
     loadAI();
     toast('✔ Saved', 'ok');
+    return true;
   } catch (e) {
     toast(`✗ ${e.message}`, 'err');
+    return false;
   }
 }
 
@@ -1154,8 +1154,10 @@ async function saveCK() {
   try {
     await patchConfig({ knowledge: data });
     toast('✔ Knowledge saved', 'ok');
+    return true;
   } catch (e) {
     toast(`✗ ${e.message}`, 'err');
+    return false;
   }
 }
 
@@ -1169,8 +1171,10 @@ async function saveTone() {
   try {
     await patchConfig({ tone: document.getElementById('ai-tone').value.trim() });
     toast('✔ Tone saved', 'ok');
+    return true;
   } catch (e) {
     toast(`✗ ${e.message}`, 'err');
+    return false;
   }
 }
 
@@ -1335,8 +1339,10 @@ async function saveBranding() {
     await patchConfig({ landing: data });
     toast('✔ Branding & copy saved', 'ok');
     refreshSbLogo();
+    return true;
   } catch (e) {
     toast(`✗ ${e.message}`, 'err');
+    return false;
   }
 }
 
@@ -1354,8 +1360,10 @@ async function saveContact() {
   try {
     await patchConfig({ contact: data });
     toast('✔ Contact details saved', 'ok');
+    return true;
   } catch (e) {
     toast(`✗ ${e.message}`, 'err');
+    return false;
   }
 }
 
