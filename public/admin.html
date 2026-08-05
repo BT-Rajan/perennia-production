@@ -902,6 +902,24 @@ async function adminFetch(url, options = {}) {
   return res;
 }
 
+// adminFetch only throws on session expiry (401) — every other non-2xx
+// status (404 not found, 409 conflict, 422 validation) comes back as a
+// normal, non-throwing Response. Callers that just `await adminFetch(...)`
+// and assume success on no-exception are wrong — this wraps that check
+// once so every POST-and-report-result action gets it for free.
+async function adminPost(url, body) {
+  const res = await adminFetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Request failed');
+  }
+  return res.json().catch(() => ({}));
+}
+
 document.getElementById('lp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 // ── Navigation ────────────────────────────────────
@@ -1607,11 +1625,7 @@ async function loadAppointments() {
 
 async function cancelAppointment(id) {
   try {
-    await adminFetch('/api/admin/appointments/cancel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
+    await adminPost('/api/admin/appointments/cancel', { id });
     toast('✔ Appointment cancelled', 'ok');
     closeModal();
     loadAppointments();
@@ -1720,17 +1734,13 @@ function openLeadModal(id) {
 
 async function saveLeadEdit(id) {
   try {
-    await adminFetch('/api/admin/leads/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        name: document.getElementById('lead-name').value.trim(),
-        email: document.getElementById('lead-email').value.trim(),
-        phone: document.getElementById('lead-phone').value.trim(),
-        status: document.getElementById('lead-status').value,
-        notes: document.getElementById('lead-notes').value,
-      })
+    await adminPost('/api/admin/leads/update', {
+      id,
+      name: document.getElementById('lead-name').value.trim(),
+      email: document.getElementById('lead-email').value.trim(),
+      phone: document.getElementById('lead-phone').value.trim(),
+      status: document.getElementById('lead-status').value,
+      notes: document.getElementById('lead-notes').value,
     });
     toast('✔ Lead saved', 'ok');
     closeModal();
@@ -1744,11 +1754,7 @@ async function attachApptToLead(leadId) {
   const apptId = document.getElementById('lead-attach-id').value.trim();
   if (!apptId) { toast('Enter an appointment ID first.', 'err'); return; }
   try {
-    await adminFetch('/api/admin/leads/attach-appointment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: leadId, appointmentId: apptId })
-    });
+    await adminPost('/api/admin/leads/attach-appointment', { id: leadId, appointmentId: apptId });
     toast('✔ Appointment attached', 'ok');
     closeModal();
     await Promise.all([loadLeads(), loadAppointments()]);
@@ -1759,11 +1765,7 @@ async function attachApptToLead(leadId) {
 
 async function detachApptFromLead(leadId) {
   try {
-    await adminFetch('/api/admin/leads/detach-appointment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: leadId })
-    });
+    await adminPost('/api/admin/leads/detach-appointment', { id: leadId });
     toast('✔ Appointment detached', 'ok');
     closeModal();
     await Promise.all([loadLeads(), loadAppointments()]);
@@ -1812,17 +1814,13 @@ function openApptModal(id) {
 
 async function saveApptEdit(id) {
   try {
-    await adminFetch('/api/admin/appointments/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        name: document.getElementById('appt-name').value.trim(),
-        email: document.getElementById('appt-email').value.trim(),
-        phone: document.getElementById('appt-phone').value.trim(),
-        service: document.getElementById('appt-service').value.trim(),
-        notes: document.getElementById('appt-notes').value,
-      })
+    await adminPost('/api/admin/appointments/update', {
+      id,
+      name: document.getElementById('appt-name').value.trim(),
+      email: document.getElementById('appt-email').value.trim(),
+      phone: document.getElementById('appt-phone').value.trim(),
+      service: document.getElementById('appt-service').value.trim(),
+      notes: document.getElementById('appt-notes').value,
     });
     toast('✔ Appointment saved', 'ok');
     closeModal();
@@ -1836,11 +1834,7 @@ async function attachLeadToAppt(apptId) {
   const leadId = document.getElementById('appt-attach-lead-id').value.trim();
   if (!leadId) { toast('Enter a lead ID first.', 'err'); return; }
   try {
-    await adminFetch('/api/admin/leads/attach-appointment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: leadId, appointmentId: apptId })
-    });
+    await adminPost('/api/admin/leads/attach-appointment', { id: leadId, appointmentId: apptId });
     toast('✔ Lead attached', 'ok');
     closeModal();
     await Promise.all([loadLeads(), loadAppointments()]);

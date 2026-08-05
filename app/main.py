@@ -1030,35 +1030,41 @@ class LeadAttachRequest(BaseModel):
 
 @app.post("/api/admin/leads/attach-appointment")
 async def attach_lead_appointment(body: LeadAttachRequest, session: dict = Depends(require_csrf)):
-    leads = storage.load_leads()
-    lidx = next((i for i, l in enumerate(leads) if l.get("id") == body.id), None)
-    if lidx is None:
-        raise HTTPException(404, "Lead not found.")
-    appts = storage.load_appointments()
-    aidx = next((i for i, a in enumerate(appts) if a.get("id") == body.appointmentId), None)
-    if aidx is None:
-        raise HTTPException(404, "Appointment not found.")
+    # Shares BOOKING_LOCK with book_appointment()'s own lead-linking step:
+    # both read-modify-write leads.json and appointments.json together,
+    # and only book_appointment held this lock before — meaning it wasn't
+    # actually exclusive against this endpoint racing it. Same lock here
+    # closes that gap.
+    with storage.BOOKING_LOCK:
+        leads = storage.load_leads()
+        lidx = next((i for i, l in enumerate(leads) if l.get("id") == body.id), None)
+        if lidx is None:
+            raise HTTPException(404, "Lead not found.")
+        appts = storage.load_appointments()
+        aidx = next((i for i, a in enumerate(appts) if a.get("id") == body.appointmentId), None)
+        if aidx is None:
+            raise HTTPException(404, "Appointment not found.")
 
-    # Keep the link one-to-one in both directions: clear any other lead
-    # that pointed at this appointment, and clear this lead's *previous*
-    # appointment (if any) so it doesn't keep a stale back-reference.
-    for l in leads:
-        if l.get("appointment_id") == appts[aidx]["id"]:
-            l["appointment_id"] = None
-            if l.get("status") == "booked":
-                l["status"] = "contacted"
-    prev_appt_id = leads[lidx].get("appointment_id")
-    if prev_appt_id and prev_appt_id != appts[aidx]["id"]:
-        for a in appts:
-            if a.get("id") == prev_appt_id:
-                a["lead_id"] = None
+        # Keep the link one-to-one in both directions: clear any other lead
+        # that pointed at this appointment, and clear this lead's *previous*
+        # appointment (if any) so it doesn't keep a stale back-reference.
+        for l in leads:
+            if l.get("appointment_id") == appts[aidx]["id"]:
+                l["appointment_id"] = None
+                if l.get("status") == "booked":
+                    l["status"] = "contacted"
+        prev_appt_id = leads[lidx].get("appointment_id")
+        if prev_appt_id and prev_appt_id != appts[aidx]["id"]:
+            for a in appts:
+                if a.get("id") == prev_appt_id:
+                    a["lead_id"] = None
 
-    leads[lidx]["appointment_id"] = appts[aidx]["id"]
-    leads[lidx]["status"] = "booked"
-    appts[aidx]["lead_id"] = leads[lidx]["id"]
-    storage.save_leads(leads)
-    storage.save_appointments(appts)
-    return leads[lidx]
+        leads[lidx]["appointment_id"] = appts[aidx]["id"]
+        leads[lidx]["status"] = "booked"
+        appts[aidx]["lead_id"] = leads[lidx]["id"]
+        storage.save_leads(leads)
+        storage.save_appointments(appts)
+        return leads[lidx]
 
 
 class LeadDetachRequest(BaseModel):
@@ -1067,22 +1073,23 @@ class LeadDetachRequest(BaseModel):
 
 @app.post("/api/admin/leads/detach-appointment")
 async def detach_lead_appointment(body: LeadDetachRequest, session: dict = Depends(require_csrf)):
-    leads = storage.load_leads()
-    lidx = next((i for i, l in enumerate(leads) if l.get("id") == body.id), None)
-    if lidx is None:
-        raise HTTPException(404, "Lead not found.")
-    appt_id = leads[lidx].get("appointment_id")
-    leads[lidx]["appointment_id"] = None
-    if leads[lidx].get("status") == "booked":
-        leads[lidx]["status"] = "contacted"
-    storage.save_leads(leads)
-    if appt_id:
-        appts = storage.load_appointments()
-        for a in appts:
-            if a.get("id") == appt_id:
-                a["lead_id"] = None
-        storage.save_appointments(appts)
-    return leads[lidx]
+    with storage.BOOKING_LOCK:
+        leads = storage.load_leads()
+        lidx = next((i for i, l in enumerate(leads) if l.get("id") == body.id), None)
+        if lidx is None:
+            raise HTTPException(404, "Lead not found.")
+        appt_id = leads[lidx].get("appointment_id")
+        leads[lidx]["appointment_id"] = None
+        if leads[lidx].get("status") == "booked":
+            leads[lidx]["status"] = "contacted"
+        storage.save_leads(leads)
+        if appt_id:
+            appts = storage.load_appointments()
+            for a in appts:
+                if a.get("id") == appt_id:
+                    a["lead_id"] = None
+            storage.save_appointments(appts)
+        return leads[lidx]
 
 
 class AppointmentUpdateRequest(BaseModel):

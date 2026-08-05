@@ -1326,6 +1326,20 @@ let sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + 
 let chatLocked = false;
 let leadId = '';
 let leadCaptured = false;
+try {
+  const saved = JSON.parse(sessionStorage.getItem('perennia_lead') || 'null');
+  if (saved && saved.leadId) {
+    leadId = saved.leadId;
+    leadCaptured = true;
+    // Restore into the gate's own fields too, not just the flag — these
+    // are what openBooking() prefills the booking form from, so without
+    // this a same-session refresh would skip the gate but hand
+    // openBooking() blank fields instead of the visitor's real details.
+    document.getElementById('lg-name').value = saved.name || '';
+    document.getElementById('lg-email').value = saved.email || '';
+    document.getElementById('lg-phone').value = saved.phone || '';
+  }
+} catch (e) { /* private mode, etc. — non-fatal; gate just shows again */ }
 const LG_PHONE_RE = /^[0-9+()\-\s]{6,25}$/;
 let chatOpen = false;
 let appointmentBooked = false;
@@ -1745,6 +1759,15 @@ function lockChat() {
 
 async function sendText(text) {
   if (busy || chatLocked || !text.trim()) return;
+  if (!leadCaptured) {
+    // Defense in depth: the gate overlay already blocks pointer events on
+    // everything beneath it, but this closes the same gap for any path
+    // that doesn't go through a click (keyboard focus reaching the
+    // textarea, a chip firing before the overlay painted, etc).
+    document.getElementById('lead-gate-panel').classList.add('open');
+    document.getElementById('lg-name')?.focus();
+    return;
+  }
   busy = true;
 
   const leavingIntent = LEAVE_RE.test(text) && !appointmentBooked && history.length >= 2;
@@ -1821,6 +1844,18 @@ function fmtWhen(iso, label) {
 }
 
 // ── Lead gate — one-time contact capture before the first message ──
+// FastAPI returns `detail` as a plain string for business-logic errors
+// (409/404/etc.) but as an ARRAY of {msg, loc, ...} objects for pydantic
+// validation errors (422) — e.g. an email that passes the lenient client
+// check below but fails the stricter server-side check. Handling only the
+// string case would show the visitor a literal "[object Object]".
+function extractErrorDetail(data, fallback) {
+  const d = data && data.detail;
+  if (typeof d === 'string' && d) return d;
+  if (Array.isArray(d) && d.length && typeof d[0]?.msg === 'string') return d[0].msg;
+  return fallback;
+}
+
 function lgText() {
   const c = COPY[lang];
   document.getElementById('lg-title').textContent = c.lgTitle;
@@ -1855,10 +1890,13 @@ async function submitLeadGate() {
       body: JSON.stringify({ name, email, phone, lang })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || c.lgErrGeneric);
+    if (!res.ok) throw new Error(extractErrorDetail(data, c.lgErrGeneric));
 
     leadId = data.leadId || '';
     leadCaptured = true;
+    try {
+      sessionStorage.setItem('perennia_lead', JSON.stringify({ leadId, name, email, phone }));
+    } catch (e) { /* private mode, etc. — non-fatal */ }
     document.getElementById('lead-gate-panel').classList.remove('open');
     document.getElementById('input').focus();
   } catch (e) {
@@ -1932,6 +1970,15 @@ function resetNewApptView() {
 }
 
 function openBooking() {
+  // The lead gate only overlays .chat-conversation-wrap — the "Talk to
+  // Us" button sits in the top bar above it, so it's reachable even
+  // while the gate is still showing. Without this check, clicking it
+  // would bypass lead capture entirely.
+  if (!leadCaptured) {
+    document.getElementById('lead-gate-panel').classList.add('open');
+    document.getElementById('lg-name')?.focus();
+    return;
+  }
   bkText();
   switchBkTab('new');
   document.getElementById('bk-err').textContent = '';

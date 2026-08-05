@@ -81,16 +81,13 @@ def run_once() -> int:
     if not due:
         return 0
 
-    leads = storage.load_leads()
-    by_id = {l["id"]: l for l in leads}
-    sent = 0
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
+    # Phase 1 — the actual sends. Deliberately outside any lock: these are
+    # slow network calls (SMTP round-trip, WhatsApp Cloud API), and holding
+    # BOOKING_LOCK for their duration would stall live booking/reschedule/
+    # cancel requests and admin lead edits for however long a send backlog
+    # takes. Nothing in this phase touches storage.
+    results: dict[str, tuple[bool, bool]] = {}
     for lead in due:
-        target = by_id.get(lead["id"])
-        if target is None:
-            continue
-
         ok_email = False
         if email_ready:
             subject, body = _nurture_copy(lead)
@@ -109,20 +106,33 @@ def run_once() -> int:
             except Exception as e:
                 log.warning("Nurture WhatsApp failed for lead %s: %s", lead.get("id"), e)
 
-        # Mark attempted either way, once at least one channel is genuinely
-        # configured: a single stale/bouncing address or number shouldn't
-        # retry forever — one attempt is the whole design, not a retry queue.
-        target["nurture_sent_at"] = now_iso
-        target["status"] = "contacted"
-        channels = [c for c, ok in (("email", ok_email), ("WhatsApp", ok_wa)) if ok]
-        outcome = "sent via " + " + ".join(channels) if channels else "attempted, no channel delivered"
-        existing_notes = target.get("notes") or ""
-        auto_note = f"[Auto] Follow-up {outcome} {now_iso}"
-        target["notes"] = f"{existing_notes}\n{auto_note}" if existing_notes else auto_note
-        if channels:
-            sent += 1
+        results[lead["id"]] = (ok_email, ok_wa)
 
-    storage.save_leads(leads)
+    # Phase 2 — apply the outcome. Short, in-memory, no network calls, so
+    # this is the only part that needs the lock. It re-reads fresh data
+    # rather than reusing the Phase 1 snapshot, and re-checks each lead is
+    # still "new" before touching it — so a booking or admin edit that
+    # landed while a slow send was in flight doesn't get clobbered by a
+    # stale "contacted" write.
+    sent = 0
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    with storage.BOOKING_LOCK:
+        leads = storage.load_leads()
+        by_id = {l["id"]: l for l in leads}
+        for lead_id, (ok_email, ok_wa) in results.items():
+            target = by_id.get(lead_id)
+            if target is None or target.get("status") != "new":
+                continue
+            target["nurture_sent_at"] = now_iso
+            target["status"] = "contacted"
+            channels = [c for c, ok in (("email", ok_email), ("WhatsApp", ok_wa)) if ok]
+            outcome = "sent via " + " + ".join(channels) if channels else "attempted, no channel delivered"
+            existing_notes = target.get("notes") or ""
+            auto_note = f"[Auto] Follow-up {outcome} {now_iso}"
+            target["notes"] = f"{existing_notes}\n{auto_note}" if existing_notes else auto_note
+            if channels:
+                sent += 1
+        storage.save_leads(leads)
     return sent
 
 
