@@ -212,15 +212,6 @@
     .kb-item-del:hover { background: #fef2f2; border-color: #fecaca; }
     .kb-empty { font-size: 0.78rem; color: var(--muted); padding: 0.5rem 0.1rem; }
 
-    /* Home-screen nav links editor */
-    .nav-link-row { border: 1.5px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem 1rem; margin-bottom: 0.85rem; background: #fafaf8; }
-    .nav-link-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
-    .nav-link-row-title { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-    .nav-link-row-actions { display: flex; gap: 0.4rem; }
-    .nav-link-order-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); font-size: 0.75rem; width: 1.7rem; height: 1.7rem; cursor: pointer; }
-    .nav-link-order-btn:hover:not(:disabled) { border-color: var(--navy); color: var(--navy); }
-    .nav-link-order-btn:disabled { opacity: 0.35; cursor: default; }
-
     /* Dashboard tiles */
     .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin-bottom: 1.25rem; }
     .dash-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; cursor: pointer; transition: all 0.18s; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 0.5rem; }
@@ -655,13 +646,11 @@
             <div class="frow"><label class="flabel">Tagline <span class="badge ben">EN</span></label><input type="text" class="finput" id="tagline-en" placeholder="Visit our V-Lounge for more"></div>
             <div class="frow"><label class="flabel">Tagline <span class="badge bar">AR</span></label><input type="text" class="finput" id="tagline-ar" dir="rtl" placeholder="زر V-Lounge الخاص بنا لمزيد من المعلومات"></div>
           </div>
-        </div>
-
-        <div class="card">
-          <div class="card-lbl">Home Screen Links</div>
-          <p class="fhint">Buttons shown in the top-right corner of the home screen (e.g. "Our Work", "Contact Us") — add as many as you like, in any order. A link with content set shows that content in a dimmed preview overlay on hover (or tap, on phones); a link with only a URL just navigates there.</p>
-          <div id="nav-links-list"></div>
-          <button type="button" class="btn-2" id="nav-link-add-btn" onclick="addNavLinkRow()" style="margin-top:10px">+ Add Link</button>
+          <div class="twin">
+            <div class="frow"><label class="flabel">"Our Work" link (optional)</label><input type="text" class="finput" id="ourWorkUrl" placeholder="https:// or /work"></div>
+            <div class="frow"><label class="flabel">"Contact Us" link (optional)</label><input type="text" class="finput" id="contactUrl" placeholder="https:// or /contact"></div>
+          </div>
+          <p class="fhint">Leave a link blank to hide that nav button on the home screen entirely.</p>
         </div>
 
         <div class="card">
@@ -1309,6 +1298,7 @@ const LANDING_SCALAR_DEFAULTS = {
   'footerText-en': '© 2026 PERENNIA', 'footerText-ar': '© 2026 بيرينيا',
   'welcomeText-en': 'Welcome to Perennia', 'welcomeText-ar': 'مرحبا بك في بيرينيا',
   'tagline-en': 'Visit our V-Lounge for more', 'tagline-ar': 'زر V-Lounge الخاص بنا لمزيد من المعلومات',
+  'ourWorkUrl': '', 'contactUrl': '',
   'chatHeader-en': "'s AI Assistant — here to help", 'chatHeader-ar': ' الذكي — هنا لمساعدتك',
   'chatGreeting-en': "Hello! I'm {brand}'s AI assistant. Ask me anything about our company — our solutions, products, industries we serve, or what makes us different.",
   'chatGreeting-ar': 'مرحباً! أنا المساعد الذكي لـ{brand}. اسألني أي شيء عن شركتنا — حلولنا، منتجاتنا، الصناعات التي نخدمها، أو ما يميزنا.',
@@ -1318,82 +1308,6 @@ const LANDING_CHIP_DEFAULTS = {
   'chatChips-en': ['What does {brand} do?', 'Tell me about your products', 'Which industries do you serve?', 'What makes you different?'],
   'chatChips-ar': ['ماذا تفعل {brand}؟', 'أخبرني عن منتجاتكم', 'ما هي الصناعات التي تخدمونها؟', 'ما الذي يميزكم؟'],
 };
-
-// ── Home-screen nav links (Our Work / Contact Us and any others the
-// admin adds) — an ordered, freeform list rather than fixed fields, so
-// this is edited as a working array in JS and only synced back into
-// the DOM/payload on render/save rather than one input id per field. ──
-let navLinksData = [];
-
-function renderNavLinksEditor() {
-  const container = document.getElementById('nav-links-list');
-  if (!navLinksData.length) {
-    container.innerHTML = '<p class="kb-empty">No links yet — click "+ Add Link" below.</p>';
-    return;
-  }
-  container.innerHTML = navLinksData.map((link, i) => `
-    <div class="nav-link-row" data-idx="${i}">
-      <div class="nav-link-row-head">
-        <span class="nav-link-row-title">Link ${i + 1}</span>
-        <div class="nav-link-row-actions">
-          <button type="button" class="nav-link-order-btn" onclick="moveNavLinkRow(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
-          <button type="button" class="nav-link-order-btn" onclick="moveNavLinkRow(${i}, 1)" ${i === navLinksData.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
-          <button type="button" class="kb-item-del" onclick="removeNavLinkRow(${i})">Remove</button>
-        </div>
-      </div>
-      <div class="twin">
-        <div class="frow"><label class="flabel">Label <span class="badge ben">EN</span></label><input type="text" class="finput nl-label-en" value="${escAttr(link.label_en)}" placeholder="Our Work"></div>
-        <div class="frow"><label class="flabel">Label <span class="badge bar">AR</span></label><input type="text" class="finput nl-label-ar" dir="rtl" value="${escAttr(link.label_ar)}" placeholder="أعمالنا"></div>
-      </div>
-      <div class="frow"><label class="flabel">Link URL (optional)</label><input type="text" class="finput nl-url" value="${escAttr(link.url)}" placeholder="https:// or /work or mailto:hi@perennia.com"></div>
-      <div class="twin">
-        <div class="frow"><label class="flabel">Preview content shown on hover/tap (optional) <span class="badge ben">EN</span></label><textarea class="fta nl-content-en" style="min-height:68px" placeholder="Shown in a dimmed overlay when a visitor hovers or taps this link.">${escHtml(link.content_en)}</textarea></div>
-        <div class="frow"><label class="flabel">Preview content <span class="badge bar">AR</span></label><textarea class="fta nl-content-ar" dir="rtl" style="min-height:68px">${escHtml(link.content_ar)}</textarea></div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function escAttr(v) { return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
-function escHtml(v) { return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-// Reads whatever's currently in the row inputs back into navLinksData —
-// called before any structural change (add/remove/reorder/save) so
-// in-progress edits in other rows aren't lost.
-function syncNavLinksFromDom() {
-  document.querySelectorAll('#nav-links-list .nav-link-row').forEach(row => {
-    const i = Number(row.dataset.idx);
-    if (!navLinksData[i]) return;
-    navLinksData[i] = {
-      id: navLinksData[i].id,
-      label_en: row.querySelector('.nl-label-en').value,
-      label_ar: row.querySelector('.nl-label-ar').value,
-      url: row.querySelector('.nl-url').value,
-      content_en: row.querySelector('.nl-content-en').value,
-      content_ar: row.querySelector('.nl-content-ar').value,
-    };
-  });
-}
-
-function addNavLinkRow() {
-  syncNavLinksFromDom();
-  navLinksData.push({ id: '', label_en: '', label_ar: '', url: '', content_en: '', content_ar: '' });
-  renderNavLinksEditor();
-}
-
-function removeNavLinkRow(i) {
-  syncNavLinksFromDom();
-  navLinksData.splice(i, 1);
-  renderNavLinksEditor();
-}
-
-function moveNavLinkRow(i, dir) {
-  syncNavLinksFromDom();
-  const j = i + dir;
-  if (j < 0 || j >= navLinksData.length) return;
-  [navLinksData[i], navLinksData[j]] = [navLinksData[j], navLinksData[i]];
-  renderNavLinksEditor();
-}
 
 function loadBranding() {
   const saved = (serverConfig && serverConfig.landing) || {};
@@ -1408,8 +1322,6 @@ function loadBranding() {
       if (el) el.value = chips[i] || '';
     }
   });
-  navLinksData = Array.isArray(saved.navLinks) ? saved.navLinks.map(l => ({ ...l })) : [];
-  renderNavLinksEditor();
   refreshSbLogo();
 }
 
@@ -1419,8 +1331,6 @@ async function saveBranding() {
   Object.keys(LANDING_CHIP_DEFAULTS).forEach(key => {
     data[key] = [0, 1, 2, 3].map(i => document.getElementById(`${key}-${i}`)?.value || '').filter(v => v.trim() !== '');
   });
-  syncNavLinksFromDom();
-  data.navLinks = navLinksData.filter(l => l.label_en.trim() || l.label_ar.trim());
   try {
     await patchConfig({ landing: data });
     toast('✔ Branding & copy saved', 'ok');
