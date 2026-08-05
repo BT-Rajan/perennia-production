@@ -28,7 +28,7 @@ from slowapi.errors import RateLimitExceeded
 from PIL import Image
 
 from app.config import settings
-from app import storage, llm, extract, gcal, scheduling, notifications
+from app import storage, llm, extract, gcal, scheduling, notifications, nurture
 from app import prompt as prompt_mod
 from app.security import (
     verify_password, create_session_token, verify_session_token,
@@ -43,6 +43,13 @@ log = logging.getLogger("perennia")
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="Perennia API", docs_url=None, redoc_url=None)
+
+
+@app.on_event("startup")
+async def _start_background_jobs():
+    nurture.start()
+
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -280,6 +287,7 @@ async def create_lead(request: Request, body: LeadRequest):
         "status": "new",        # new → contacted → booked / lost
         "notes": "",
         "appointment_id": None,
+        "nurture_sent_at": None,
     }
     storage.add_lead(entry)
     return {"ok": True, "leadId": entry["id"]}

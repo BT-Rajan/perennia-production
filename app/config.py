@@ -121,6 +121,13 @@ class Settings:
     # configured in the admin panel (config.json → contact.ct-email) if unset.
     ADMIN_NOTIFY_EMAIL: str = _get("ADMIN_NOTIFY_EMAIL", "")
 
+    # ── Lead nurture ──────────────────────────────────────────────
+    # One automatic follow-up email to a lead who shared contact details
+    # but never booked — deliberately a single nudge, not a drip sequence.
+    NURTURE_ENABLED: bool = _get("NURTURE_ENABLED", "true").lower() == "true"
+    NURTURE_DELAY_HOURS: int = int(_get("NURTURE_DELAY_HOURS", "3"))
+    NURTURE_CHECK_INTERVAL_MINUTES: int = int(_get("NURTURE_CHECK_INTERVAL_MINUTES", "15"))
+
 
 settings = Settings()
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
