@@ -142,6 +142,46 @@ body::before {
   white-space: nowrap;
 }
 
+/* ── Nav-link preview overlay: hovering (or tapping, on touch) an
+   admin-managed top-bar link dims the page and surfaces the content the
+   admin entered for it, staying up until the pointer leaves (desktop) or
+   the visitor taps away (touch). ── */
+.nav-preview-backdrop {
+  position: fixed; inset: 0; z-index: 210;
+  background: rgba(4,12,28,0.6); backdrop-filter: blur(3px);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.nav-preview-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto; }
+.nav-preview-card {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -46%);
+  z-index: 211; width: min(440px, calc(100vw - 48px)); max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(255,255,255,0.1) 0%, rgba(107,170,232,0.08) 45%, rgba(4,26,62,0.85) 100%), var(--navy-2);
+  border: 1px solid rgba(201,162,39,0.28);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+  padding: 26px 26px 22px;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.nav-preview-backdrop.open .nav-preview-card { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, -50%); }
+.nav-preview-title { font-family: var(--font-en-display); font-size: 19px; font-weight: 600; color: var(--gold); margin-bottom: 10px; }
+[dir="rtl"] .nav-preview-title { font-family: var(--font-ar); font-weight: 500; }
+.nav-preview-body { font-size: 13.5px; line-height: 1.75; color: rgba(255,255,255,0.82); white-space: pre-line; }
+.nav-preview-visit {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 18px;
+  background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--gold);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-decoration: none;
+  padding: 8px 16px; border-radius: 100px;
+}
+.nav-preview-close {
+  position: absolute; top: 12px; right: 14px; background: none; border: none;
+  color: rgba(255,255,255,0.5); font-size: 16px; cursor: pointer; line-height: 1;
+}
+[dir="rtl"] .nav-preview-close { right: auto; left: 14px; }
+[dir="rtl"] .nav-preview-visit { flex-direction: row-reverse; }
+
 /* ── Wordmark fallback (shown if the admin hasn't uploaded a logo yet) ── */
 .wordmark {
   display: none;
@@ -775,8 +815,9 @@ main.chat-main {
 <!-- ─── HOME / LANDING PAGE ─── -->
 <div id="home-page">
   <div class="top-bar">
-    <button class="nav-pill" id="our-work-link" style="display:none">Our Work</button>
-    <button class="nav-pill" id="contact-link" style="display:none">Contact Us</button>
+    <!-- Admin-managed links (any number, order/labels/content set in the
+         admin panel) render here — see renderNavLinks(). -->
+    <div id="nav-links" style="display:contents"></div>
     <button class="lang-btn" id="home-lang-btn" onclick="toggleLang()">AR | عربي</button>
   </div>
 
@@ -794,6 +835,18 @@ main.chat-main {
   </div>
 
   <footer id="home-footer"></footer>
+</div>
+
+<!-- Nav-link hover/tap preview: dims the page and shows the admin-entered
+     content for whichever link is active, until the pointer leaves (or,
+     on touch, until the visitor taps the backdrop / close button). -->
+<div class="nav-preview-backdrop" id="nav-preview-backdrop">
+  <div class="nav-preview-card" id="nav-preview-card">
+    <button class="nav-preview-close" id="nav-preview-close" aria-label="Close">✕</button>
+    <div class="nav-preview-title" id="nav-preview-title"></div>
+    <div class="nav-preview-body" id="nav-preview-body"></div>
+    <a class="nav-preview-visit" id="nav-preview-visit" style="display:none" target="_blank" rel="noopener"></a>
+  </div>
 </div>
 
 <!-- ─── CHAT PAGE ─── -->
@@ -1300,22 +1353,74 @@ function startSlideRotation() {
 }
 
 
+// ── Admin-managed top-bar links + their hover/tap preview overlay ──
+window.navLinks = [];
+const isTouchDevice = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+function renderNavLinks() {
+  const container = document.getElementById('nav-links');
+  container.innerHTML = '';
+  window.navLinks.forEach(link => {
+    const label = (lang === 'ar' ? link.label_ar : link.label_en) || link.label_en || link.label_ar;
+    if (!label) return;
+    const btn = document.createElement('button');
+    btn.className = 'nav-pill';
+    btn.textContent = label;
+    const hasContent = !!((lang === 'ar' ? link.content_ar : link.content_en) || link.content_en || link.content_ar);
+    if (hasContent) {
+      if (isTouchDevice) {
+        btn.onclick = (e) => { e.stopPropagation(); showNavPreview(link); };
+      } else {
+        btn.addEventListener('mouseenter', () => showNavPreview(link));
+        btn.addEventListener('mouseleave', hideNavPreview);
+        btn.onclick = (e) => { e.stopPropagation(); if (link.url) followNavLink(link.url); };
+      }
+    } else if (link.url) {
+      btn.onclick = (e) => { e.stopPropagation(); followNavLink(link.url); };
+    }
+    container.appendChild(btn);
+  });
+}
+
+function followNavLink(url) {
+  if (url.startsWith('http')) window.open(url, '_blank'); else window.location.href = url;
+}
+
+function showNavPreview(link) {
+  const title = (lang === 'ar' ? link.label_ar : link.label_en) || link.label_en || link.label_ar;
+  const body = (lang === 'ar' ? link.content_ar : link.content_en) || link.content_en || link.content_ar || '';
+  document.getElementById('nav-preview-title').textContent = title;
+  document.getElementById('nav-preview-body').textContent = body;
+  const visitEl = document.getElementById('nav-preview-visit');
+  if (link.url) {
+    visitEl.href = link.url;
+    visitEl.textContent = lang === 'ar' ? 'زيارة' : 'Visit';
+    visitEl.style.display = 'inline-flex';
+  } else {
+    visitEl.style.display = 'none';
+  }
+  document.getElementById('nav-preview-backdrop').classList.add('open');
+}
+
+function hideNavPreview() {
+  document.getElementById('nav-preview-backdrop').classList.remove('open');
+}
+
+document.getElementById('nav-preview-backdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'nav-preview-backdrop') hideNavPreview();
+});
+document.getElementById('nav-preview-close').addEventListener('click', hideNavPreview);
+document.getElementById('nav-preview-card').addEventListener('mouseleave', () => {
+  if (!isTouchDevice) hideNavPreview();
+});
+
 function renderHomeUI() {
   const h = HOME_TXT[lang];
   document.getElementById('home-welcome-text').textContent = h.welcome;
   document.getElementById('home-tagline-text').textContent = h.tagline;
   document.getElementById('home-hint-text').textContent = h.hint;
 
-  const ourWorkEl = document.getElementById('our-work-link');
-  const contactEl = document.getElementById('contact-link');
-  ourWorkEl.textContent = h.ourWork;
-  contactEl.textContent = h.contactUs;
-  // Only show these once we actually know a destination is configured —
-  // an admin who hasn't set one yet shouldn't ship a button that does
-  // nothing when tapped.
-  ourWorkEl.style.display = window.ourWorkUrl ? 'flex' : 'none';
-  contactEl.style.display = window.contactUrl ? 'flex' : 'none';
-
+  renderNavLinks();
   applyLogoVisibility();
 }
 
@@ -1356,8 +1461,7 @@ async function initHome() {
       if (data.landing['welcomeText-ar']) HOME_TXT.ar.welcome = data.landing['welcomeText-ar'];
       if (data.landing['tagline-en']) HOME_TXT.en.tagline = data.landing['tagline-en'];
       if (data.landing['tagline-ar']) HOME_TXT.ar.tagline = data.landing['tagline-ar'];
-      if (data.landing['ourWorkUrl']) window.ourWorkUrl = data.landing['ourWorkUrl'];
-      if (data.landing['contactUrl']) window.contactUrl = data.landing['contactUrl'];
+      window.navLinks = Array.isArray(data.landing['navLinks']) ? data.landing['navLinks'] : [];
       applyBrandConfig(data.landing);
     }
     // Note: booking.promptsEn/Ar are the mid-conversation "want to book a
@@ -1377,16 +1481,6 @@ async function initHome() {
 }
 
 document.getElementById('home-center').addEventListener('click', () => openChat());
-document.getElementById('our-work-link').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const url = window.ourWorkUrl || '#';
-  if (url.startsWith('http')) window.open(url, '_blank'); else if (url !== '#') window.location.href = url;
-});
-document.getElementById('contact-link').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const url = window.contactUrl || '#';
-  if (url.startsWith('http')) window.open(url, '_blank'); else if (url !== '#') window.location.href = url;
-});
 
 // ── Chat page open / close ─────────────────────────────────
 function openChat() {
@@ -1665,7 +1759,16 @@ function bkText() {
   document.getElementById('bk-lbl-notes').textContent = c.bkNotes;
   document.getElementById('bk-cancel-btn').textContent = c.bkCancel;
   document.getElementById('bk-submit-btn').textContent = c.bkSubmit;
-  document.getElementById('bk-slots-msg').textContent = c.bkPickDate;
+  // #bk-slots-msg / #bk-re-slots-msg are the *initial* placeholder nodes inside
+  // #bk-slots / #bk-re-slots — loadSlots()/loadRescheduleSlots() replace that
+  // container's innerHTML the first time a date is picked, which permanently
+  // removes these ids from the DOM. Without the null-guard, re-opening the
+  // booking panel after that (e.g. right after booking, to reschedule/cancel)
+  // threw here and aborted openBooking() before it ever added the "open"
+  // class — silently failing to reopen. See resetNewApptView()/resetManageView()
+  // below, which restore fresh placeholder nodes so this stays non-null.
+  const bkSlotsMsg = document.getElementById('bk-slots-msg');
+  if (bkSlotsMsg) bkSlotsMsg.textContent = c.bkPickDate;
   document.getElementById('bk-lbl-lookup-id').textContent = c.bkLookupId;
   document.getElementById('bk-lbl-lookup-email').textContent = c.bkLookupEmail;
   document.getElementById('bk-lookup-btn').textContent = c.bkLookupBtn;
@@ -1674,7 +1777,8 @@ function bkText() {
   document.getElementById('bk-manage-back-btn').textContent = c.bkFindDifferent;
   document.getElementById('bk-lbl-re-date').textContent = c.bkDate;
   document.getElementById('bk-lbl-re-slot').textContent = c.bkSlot;
-  document.getElementById('bk-re-slots-msg').textContent = c.bkPickDate;
+  const bkReSlotsMsg = document.getElementById('bk-re-slots-msg');
+  if (bkReSlotsMsg) bkReSlotsMsg.textContent = c.bkPickDate;
   document.getElementById('bk-re-submit-btn').textContent = c.bkReschedConfirmBtn;
 }
 
@@ -1686,11 +1790,28 @@ function switchBkTab(tab) {
   document.getElementById('bk-success').style.display = 'none';
 }
 
+// Restores #bk-slots (and #bk-re-slots) to their original placeholder markup —
+// undoes the innerHTML replacement loadSlots()/loadRescheduleSlots() does once
+// a date is picked, so the panel looks fresh (no stale slots/date left over
+// from a previous booking) and #bk-slots-msg/#bk-re-slots-msg exist again for
+// bkText() to update next time.
+function resetNewApptView() {
+  const c = COPY[lang];
+  pickedSlot = null;
+  document.getElementById('bk-date').value = '';
+  document.getElementById('bk-slots').innerHTML = `<div class="bk-slots-empty" id="bk-slots-msg">${c.bkPickDate}</div>`;
+  document.getElementById('bk-name').value = '';
+  document.getElementById('bk-email').value = '';
+  document.getElementById('bk-phone').value = '';
+  document.getElementById('bk-service').value = '';
+  document.getElementById('bk-notes').value = '';
+}
+
 function openBooking() {
   bkText();
   switchBkTab('new');
   document.getElementById('bk-err').textContent = '';
-  pickedSlot = null;
+  resetNewApptView();
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById('bk-date').min = today;
   document.getElementById('bk-re-date').min = today;
@@ -1781,6 +1902,7 @@ async function submitBooking() {
 
 // ── Manage an existing appointment: lookup, reschedule, cancel ──
 function resetManageView() {
+  const c = COPY[lang];
   currentManagedAppt = null;
   pickedRescheduleSlot = null;
   document.getElementById('bk-lookup-form').style.display = 'block';
@@ -1791,6 +1913,11 @@ function resetManageView() {
   document.getElementById('bk-lookup-err').textContent = '';
   document.getElementById('bk-lookup-id').value = '';
   document.getElementById('bk-lookup-email').value = '';
+  document.getElementById('bk-re-date').value = '';
+  // Same placeholder-restoration as resetNewApptView() — loadRescheduleSlots()
+  // wipes #bk-re-slots-msg's parent the first time a reschedule date is
+  // picked, so put a fresh placeholder node back.
+  document.getElementById('bk-re-slots').innerHTML = `<div class="bk-slots-empty" id="bk-re-slots-msg">${c.bkPickDate}</div>`;
 }
 
 async function lookupAppointment() {

@@ -50,6 +50,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "tagline-ar": "زر V-Lounge الخاص بنا لمزيد من المعلومات",
         "ourWorkUrl": "",
         "contactUrl": "",
+        # Admin-managed top-bar links (replaces the old fixed "Our Work" /
+        # "Contact Us" pair above — any number of links, each with its own
+        # label, optional destination URL, and optional preview content
+        # shown in the hover/tap overlay on the public site). List order is
+        # display order. See _migrate_legacy_nav_links() below for the
+        # upgrade path from the old two fixed fields.
+        "navLinks": [],
         # ── Brand identity (drives <title>, wordmark fallback, footer,
         #    chat header/greeting) — every visible brand string is admin-
         #    editable here instead of hardcoded in the page. ──
@@ -107,6 +114,31 @@ def _atomic_write_json(path: Path, data: Any) -> None:
     os.replace(tmp_path, path)  # atomic on POSIX
 
 
+def _migrate_legacy_nav_links(config: dict[str, Any]) -> None:
+    """Upgrade path for configs written before the generic nav-links list
+    existed: they only had two fixed fields (ourWorkUrl/contactUrl). Fold
+    those into navLinks (only if that list is still empty, so this never
+    clobbers links an admin has already configured through the new UI).
+    Always reassigns a fresh dict to config["landing"] rather than mutating
+    in place, since that dict may still be the DEFAULT_CONFIG one."""
+    landing = dict(config.get("landing") or {})
+    if not landing.get("navLinks"):
+        legacy = []
+        if landing.get("ourWorkUrl"):
+            legacy.append({
+                "id": "legacy-our-work", "label_en": "Our Work", "label_ar": "أعمالنا",
+                "url": landing["ourWorkUrl"], "content_en": "", "content_ar": "",
+            })
+        if landing.get("contactUrl"):
+            legacy.append({
+                "id": "legacy-contact", "label_en": "Contact Us", "label_ar": "اتصل بنا",
+                "url": landing["contactUrl"], "content_en": "", "content_ar": "",
+            })
+        if legacy:
+            landing["navLinks"] = legacy
+    config["landing"] = landing
+
+
 def load_config() -> dict[str, Any]:
     with _lock:
         if not CONFIG_PATH.exists():
@@ -118,6 +150,7 @@ def load_config() -> dict[str, Any]:
             return dict(DEFAULT_CONFIG)
         merged = dict(DEFAULT_CONFIG)
         merged.update(data)
+        _migrate_legacy_nav_links(merged)
         return merged
 
 

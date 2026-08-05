@@ -560,6 +560,36 @@ def _validate_landing_url(value: str) -> str:
     return value
 
 
+MAX_NAV_LINKS = 8
+
+
+def _validate_nav_links(value) -> list[dict]:
+    """Validate the admin-managed top-bar links list. List order is display
+    order (drag/reorder in the admin UI is just array reordering — the
+    whole list is replaced on every save, so there's no separate
+    create/update/delete/reorder endpoint to keep in sync)."""
+    if not isinstance(value, list):
+        raise HTTPException(400, "navLinks must be a list.")
+    cleaned = []
+    for item in value[:MAX_NAV_LINKS]:
+        if not isinstance(item, dict):
+            continue
+        label_en = str(item.get("label_en", "")).strip()[:60]
+        label_ar = str(item.get("label_ar", "")).strip()[:60]
+        if not label_en and not label_ar:
+            continue  # a link with no label in either language can't be shown
+        link_id = str(item.get("id") or uuid.uuid4().hex)[:64]
+        cleaned.append({
+            "id": link_id,
+            "label_en": label_en,
+            "label_ar": label_ar,
+            "url": _validate_landing_url(str(item.get("url", ""))[:2000]),
+            "content_en": str(item.get("content_en", ""))[:4000],
+            "content_ar": str(item.get("content_ar", ""))[:4000],
+        })
+    return cleaned
+
+
 def _public_config_view(config: dict) -> dict:
     api_key = storage.get_decrypted_api_key(config)
     view = {k: v for k, v in config.items() if k != "apiKeyEncrypted"}
@@ -623,6 +653,8 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
                 landing[key] = str(value)[:500]
             elif key in ["ourWorkUrl", "contactUrl"]:
                 landing[key] = _validate_landing_url(str(value)[:2000])
+            elif key == "navLinks":
+                landing[key] = _validate_nav_links(value)
             elif key in ["chatChips-en", "chatChips-ar"]:
                 landing[key] = [str(c)[:200] for c in value][:6]
         config["landing"] = landing
