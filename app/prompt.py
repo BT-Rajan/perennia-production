@@ -86,39 +86,55 @@ def build_nudge_text(for_lang: str, turns_used: int, max_turns: int) -> str:
     )
 
 
-LEAD_TAG_RE_SOURCE = r'\[\[LEAD_CAPTURED\s+name="([^"]*)"\s+email="([^"]*)"\s+phone="([^"]*)"\s*\]\]'
+LEAD_TAG_RE_SOURCE = r'\[\[LEAD_CAPTURED\s+name="([^"]*)"\s+phone="([^"]*)"\s+email="([^"]*)"\s*\]\]'
 
 
 def build_lead_capture_text(for_lang: str, already_captured: bool) -> str:
-    """Instructs the assistant to gather the visitor's name, email, and
-    phone conversationally — woven into the natural back-and-forth rather
-    than presented as a checklist or form — and to signal back to the
-    backend once it has all three via a hidden tag the visitor never sees.
-    Skipped entirely once a lead has already been captured this session."""
+    """Instructs the assistant to collect the visitor's name, then phone,
+    then email — in that order, one at a time, politely framed as the
+    basis for a good relationship — before getting into anything else,
+    and to signal back to the backend once it has all three via a hidden
+    tag the visitor never sees. Skipped entirely once a lead has already
+    been captured this session."""
     if already_captured:
         return ""
     if for_lang == "ar":
         return (
-            "\n\nمهمة إضافية بصمت: خلال المحادثة الطبيعية (وليس كأول شيء تسأله، وليس كقائمة "
-            "أو نموذج)، اجمع تدريجياً اسم الزائر وبريده الإلكتروني ورقم هاتفه — وذلك حتى نتمكن "
-            "من التواصل معه إذا انقطع الاتصال. اطلب كل معلومة بشكل طبيعي ضمن سياق الحديث، معلومة "
-            "واحدة في كل مرة، لا تسألهم دفعة واحدة. إذا تردد الزائر أو تجاهل السؤال، لا تُلحّ ولا "
-            "تكرر الطلب — تابع مساعدته بشكل طبيعي. بمجرد حصولك على الاسم وبريد إلكتروني صالح "
-            "ورقم هاتف صالح، أضِف هذا السطر بالضبط في نهاية ردّك، مع القيم الفعلية، ولا شيء آخر "
-            "على ذلك السطر:\n"
-            '[[LEAD_CAPTURED name="..." email="..." phone="..."]]\n'
+            "\n\nمهم — قبل أي شيء آخر: هذه أول محادثة مع الزائر ولم نحصل بعد على بياناته. "
+            "بأسلوب دافئ ومهني وليس متكرراً أو مُلحّاً، اجمع ثلاث معلومات بالترتيب التالي، "
+            "معلومة واحدة في كل رسالة، منتظراً رد الزائر بينها:\n"
+            "1. الاسم — اسأله بلطف عن اسمه أولاً.\n"
+            "2. رقم الهاتف — بعد أن يخبرك باسمه، اشكره واطلب رقم هاتفه.\n"
+            "3. البريد الإلكتروني — بعد أن يزودك برقم هاتفه، اطلب بريده الإلكتروني.\n"
+            "اشرح له بإيجاز ولطف أن هذه المعلومات تساعدنا على بناء علاقة أفضل معه ومتابعة "
+            "طلبه بشكل صحيح — وليس مجرد إجراء روتيني. إذا طرح الزائر سؤالاً حقيقياً قبل أن "
+            "يُكمل هذه الخطوات، أجب عليه بإيجاز أولاً، ثم عُد بلطف لطلب المعلومة التالية "
+            "الناقصة، دون تكرار الطلب أكثر من مرة أو مرتين إذا تجاهله الزائر بوضوح — واصل "
+            "مساعدته عندها بشكل طبيعي دون مزيد من الإلحاح. لا تنتقل إلى مساعدته في مواضيع "
+            "أخرى قبل محاولة جمع هذه المعلومات الثلاث أولاً. بمجرد حصولك على الاسم ورقم هاتف "
+            "صالح وبريد إلكتروني صالح، أضِف هذا السطر بالضبط في نهاية ردّك، مع القيم الفعلية، "
+            "ولا شيء آخر على ذلك السطر:\n"
+            '[[LEAD_CAPTURED name="..." phone="..." email="..."]]\n'
             "لا تذكر هذا السطر أو تشرحه للزائر أبداً، ولا تُظهره إلا مرة واحدة فقط بعد اكتمال "
             "المعلومات الثلاث."
         )
     return (
-        "\n\nQUIET SIDE TASK: over the course of the natural conversation — never as the first "
-        "thing you ask, and never as a checklist or form — gather the visitor's name, email, and "
-        "phone number, so we can follow up if we get disconnected. Ask for one piece at a time, "
-        "worked naturally into your replies, not all at once. If the visitor hesitates or ignores "
-        "the ask, don't push or repeat it — just keep helping them normally. Once you have a name, "
-        "a valid-looking email, and a valid-looking phone number, append this exact line at the "
+        "\n\nIMPORTANT — before anything else: this visitor's details haven't been collected "
+        "yet. In a warm, professional tone — never repetitive or pushy — collect three things "
+        "in this exact order, one per message, waiting for the visitor's reply between each:\n"
+        "1. Name — politely ask for their name first.\n"
+        "2. Phone number — once they've given their name, thank them and ask for their phone "
+        "number.\n"
+        "3. Email — once they've given their phone number, ask for their email.\n"
+        "Briefly and warmly explain that this helps us build a good relationship with them and "
+        "follow up properly — frame it as care, not paperwork. If the visitor asks a real "
+        "question before finishing these steps, answer it briefly first, then gently return to "
+        "asking for the next missing detail — don't ask more than once or twice if they clearly "
+        "brush it off, just keep helping them normally after that. Don't move on to helping with "
+        "other topics before at least attempting to collect all three. Once you have a name, a "
+        "valid-looking phone number, and a valid-looking email, append this exact line at the "
         "very end of your reply, with the real values filled in and nothing else on that line:\n"
-        '[[LEAD_CAPTURED name="..." email="..." phone="..."]]\n'
+        '[[LEAD_CAPTURED name="..." phone="..." email="..."]]\n'
         "Never mention or explain this line to the visitor, and only emit it once, the first time "
         "all three are in hand."
     )

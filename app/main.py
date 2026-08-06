@@ -168,7 +168,7 @@ def _extract_conversational_lead(reply: str, lang: str) -> tuple[str, Optional[d
         return reply, None
 
     cleaned = (reply[:match.start()] + reply[match.end():]).strip()
-    name, email, phone = (g.strip() for g in match.groups())
+    name, phone, email = (g.strip() for g in match.groups())
 
     if not (NAME_RE.match(name) and SIMPLE_EMAIL_RE.match(email) and PHONE_RE.match(phone)):
         log.info("Ignored malformed conversational lead tag from LLM output.")
