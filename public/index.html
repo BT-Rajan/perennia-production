@@ -914,26 +914,6 @@ main.chat-main {
               </div>
             </div>
 
-            <!-- ─── Lead gate — visitor must share contact details before the
-                 conversation unlocks. Reuses .booking-panel's exact overlay
-                 pattern (same absolute-inset-blur-backdrop mechanism), so no
-                 new overlay CSS is needed and it visually/functionally blocks
-                 the messages, chips, and input beneath it while open. ─── -->
-            <div class="booking-panel" id="lead-gate-panel" style="z-index:25">
-              <div class="booking-badge">👋</div>
-              <h3 id="lg-title">Before we start</h3>
-              <p id="lg-sub">Share your details so we can follow up if we get disconnected.</p>
-              <div class="booking-head-divider"></div>
-
-              <div class="bk-field"><label id="lg-lbl-name">Name</label><input id="lg-name" type="text" maxlength="120" autocomplete="name"></div>
-              <div class="bk-field"><label id="lg-lbl-email">Email</label><input id="lg-email" type="email" autocomplete="email"></div>
-              <div class="bk-field"><label id="lg-lbl-phone">Phone</label><input id="lg-phone" type="tel" autocomplete="tel"></div>
-              <div class="bk-err" id="lg-err"></div>
-              <div class="booking-foot">
-                <button class="send-btn-wide" id="lg-submit-btn" onclick="submitLeadGate()" style="flex:1">Start Chatting</button>
-              </div>
-            </div>
-
             <!-- ─── Talk to Us — lives inside the chat shell itself, synced with the
                  conversation (same session, posts its result back into the transcript) ─── -->
             <div class="booking-panel" id="booking-panel">
@@ -1214,14 +1194,6 @@ const COPY = {
     bkCancelConfirm: 'Are you sure you want to cancel this appointment?',
     bkCancelSuccess: (label, id) => `Appointment <strong>${id}</strong> (${label}) has been cancelled. A confirmation email is on its way.`,
     bkRescheduleSuccess: (label, id) => `Appointment <strong>${id}</strong> has been moved to <strong>${label}</strong>. A confirmation email is on its way.`,
-    lgTitle: 'Before we start',
-    lgSub: "Share your details so we can follow up if we get disconnected.",
-    lgName: 'Name', lgEmail: 'Email', lgPhone: 'Phone',
-    lgSubmit: 'Start Chatting', lgSubmitting: 'One moment…',
-    lgErrName: 'Please enter your name.',
-    lgErrEmail: 'Please enter a valid email address.',
-    lgErrPhone: 'Please enter a valid phone number.',
-    lgErrGeneric: 'Something went wrong. Please try again.',
     apptSummary: (a) => {
       const dt = new Date(a.start);
       const when = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' at ' +
@@ -1283,14 +1255,6 @@ const COPY = {
     bkCancelConfirm: 'هل أنت متأكد أنك تريد إلغاء هذا الموعد؟',
     bkCancelSuccess: (label, id) => `تم إلغاء الموعد <strong>${id}</strong> (${label}). ستصلك رسالة تأكيد قريباً.`,
     bkRescheduleSuccess: (label, id) => `تم نقل الموعد <strong>${id}</strong> إلى <strong>${label}</strong>. ستصلك رسالة تأكيد قريباً.`,
-    lgTitle: 'قبل أن نبدأ',
-    lgSub: 'شاركنا بياناتك لنتمكن من التواصل معك في حال انقطع الاتصال.',
-    lgName: 'الاسم', lgEmail: 'البريد الإلكتروني', lgPhone: 'رقم الهاتف',
-    lgSubmit: 'ابدأ المحادثة', lgSubmitting: 'لحظات…',
-    lgErrName: 'يرجى إدخال اسمك.',
-    lgErrEmail: 'يرجى إدخال بريد إلكتروني صحيح.',
-    lgErrPhone: 'يرجى إدخال رقم هاتف صحيح.',
-    lgErrGeneric: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
     apptSummary: (a) => {
       const dt = new Date(a.start);
       const when = dt.toLocaleDateString('ar', { weekday: 'long', month: 'long', day: 'numeric' }) + ' الساعة ' +
@@ -1324,23 +1288,26 @@ let busy = false;
 let aiAvatarSrc = null;
 let sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
 let chatLocked = false;
+// Lead capture now happens conversationally: the assistant itself asks for
+// name/email/phone naturally during the chat (see prompt.py), and the
+// backend tells us via leadCaptured/leadId/leadName/... on a /api/chat
+// response once it's parsed those out of the model's reply. No blocking
+// gate/form — these just get filled in as the conversation progresses.
 let leadId = '';
 let leadCaptured = false;
+let leadName = '';
+let leadEmail = '';
+let leadPhone = '';
 try {
   const saved = JSON.parse(sessionStorage.getItem('perennia_lead') || 'null');
   if (saved && saved.leadId) {
     leadId = saved.leadId;
     leadCaptured = true;
-    // Restore into the gate's own fields too, not just the flag — these
-    // are what openBooking() prefills the booking form from, so without
-    // this a same-session refresh would skip the gate but hand
-    // openBooking() blank fields instead of the visitor's real details.
-    document.getElementById('lg-name').value = saved.name || '';
-    document.getElementById('lg-email').value = saved.email || '';
-    document.getElementById('lg-phone').value = saved.phone || '';
+    leadName = saved.name || '';
+    leadEmail = saved.email || '';
+    leadPhone = saved.phone || '';
   }
-} catch (e) { /* private mode, etc. — non-fatal; gate just shows again */ }
-const LG_PHONE_RE = /^[0-9+()\-\s]{6,25}$/;
+} catch (e) { /* private mode, etc. — non-fatal; assistant just asks again */ }
 let chatOpen = false;
 let appointmentBooked = false;
 let pickedSlot = null;
@@ -1575,13 +1542,7 @@ function openChat() {
   const el = document.getElementById('chat-page');
   el.style.display = 'flex';
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('active')));
-  if (!leadCaptured) {
-    lgText();
-    document.getElementById('lead-gate-panel').classList.add('open');
-    setTimeout(() => document.getElementById('lg-name')?.focus(), 400);
-  } else {
-    setTimeout(() => document.getElementById('input').focus(), 400);
-  }
+  setTimeout(() => document.getElementById('input').focus(), 400);
 }
 
 function closeChat() {
@@ -1737,10 +1698,28 @@ async function callAI(userMessage) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lang, message: userMessage, history, sessionId })
+    body: JSON.stringify({ lang, message: userMessage, history, sessionId, leadCaptured })
   });
   if (!res.ok) throw new Error(`chat ${res.status}`);
   return res.json();
+}
+
+// Applies a lead the backend parsed out of the assistant's reply once it
+// naturally gathered name/email/phone during the conversation — no gate,
+// no form, just the chat itself. Mirrors what the old gate-submit handler
+// used to store, so booking prefill and appointment-linking keep working.
+function applyCapturedLead(data) {
+  if (!data || !data.leadCaptured || leadCaptured) return;
+  leadId = data.leadId || '';
+  leadName = data.leadName || '';
+  leadEmail = data.leadEmail || '';
+  leadPhone = data.leadPhone || '';
+  leadCaptured = true;
+  try {
+    sessionStorage.setItem('perennia_lead', JSON.stringify({
+      leadId, name: leadName, email: leadEmail, phone: leadPhone,
+    }));
+  } catch (e) { /* private mode, etc. — non-fatal */ }
 }
 
 // ── Send ──────────────────────────────────────────────────
@@ -1759,15 +1738,6 @@ function lockChat() {
 
 async function sendText(text) {
   if (busy || chatLocked || !text.trim()) return;
-  if (!leadCaptured) {
-    // Defense in depth: the gate overlay already blocks pointer events on
-    // everything beneath it, but this closes the same gap for any path
-    // that doesn't go through a click (keyboard focus reaching the
-    // textarea, a chip firing before the overlay painted, etc).
-    document.getElementById('lead-gate-panel').classList.add('open');
-    document.getElementById('lg-name')?.focus();
-    return;
-  }
   busy = true;
 
   const leavingIntent = LEAVE_RE.test(text) && !appointmentBooked && history.length >= 2;
@@ -1782,6 +1752,7 @@ async function sendText(text) {
   try {
     const data = await callAI(text);
     hideTyping();
+    applyCapturedLead(data);
     const nearLimit = !data.limitReached && data.maxTurns && (data.maxTurns - data.turnsUsed) <= 3;
     addMsg('ai', data.reply, { cta: data.limitReached || nearLimit });
     history.push({ role: 'assistant', content: data.reply });
@@ -1841,69 +1812,6 @@ function fmtWhen(iso, label) {
   if (label) return `${datePart} · ${label}`;
   const timePart = dt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
   return `${datePart} · ${timePart}`;
-}
-
-// ── Lead gate — one-time contact capture before the first message ──
-// FastAPI returns `detail` as a plain string for business-logic errors
-// (409/404/etc.) but as an ARRAY of {msg, loc, ...} objects for pydantic
-// validation errors (422) — e.g. an email that passes the lenient client
-// check below but fails the stricter server-side check. Handling only the
-// string case would show the visitor a literal "[object Object]".
-function extractErrorDetail(data, fallback) {
-  const d = data && data.detail;
-  if (typeof d === 'string' && d) return d;
-  if (Array.isArray(d) && d.length && typeof d[0]?.msg === 'string') return d[0].msg;
-  return fallback;
-}
-
-function lgText() {
-  const c = COPY[lang];
-  document.getElementById('lg-title').textContent = c.lgTitle;
-  document.getElementById('lg-sub').textContent = c.lgSub;
-  document.getElementById('lg-lbl-name').textContent = c.lgName;
-  document.getElementById('lg-lbl-email').textContent = c.lgEmail;
-  document.getElementById('lg-lbl-phone').textContent = c.lgPhone;
-  document.getElementById('lg-submit-btn').textContent = c.lgSubmit;
-  document.getElementById('lg-err').textContent = '';
-}
-
-async function submitLeadGate() {
-  const c = COPY[lang];
-  const errEl = document.getElementById('lg-err');
-  const name = document.getElementById('lg-name').value.trim();
-  const email = document.getElementById('lg-email').value.trim();
-  const phone = document.getElementById('lg-phone').value.trim();
-
-  if (!name) { errEl.textContent = c.lgErrName; return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = c.lgErrEmail; return; }
-  if (!LG_PHONE_RE.test(phone)) { errEl.textContent = c.lgErrPhone; return; }
-  errEl.textContent = '';
-
-  const btn = document.getElementById('lg-submit-btn');
-  btn.disabled = true;
-  btn.textContent = c.lgSubmitting;
-
-  try {
-    const res = await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone, lang })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(extractErrorDetail(data, c.lgErrGeneric));
-
-    leadId = data.leadId || '';
-    leadCaptured = true;
-    try {
-      sessionStorage.setItem('perennia_lead', JSON.stringify({ leadId, name, email, phone }));
-    } catch (e) { /* private mode, etc. — non-fatal */ }
-    document.getElementById('lead-gate-panel').classList.remove('open');
-    document.getElementById('input').focus();
-  } catch (e) {
-    errEl.textContent = e.message || c.lgErrGeneric;
-  }
-  btn.disabled = false;
-  btn.textContent = c.lgSubmit;
 }
 
 function bkText() {
@@ -1970,23 +1878,17 @@ function resetNewApptView() {
 }
 
 function openBooking() {
-  // The lead gate only overlays .chat-conversation-wrap — the "Talk to
-  // Us" button sits in the top bar above it, so it's reachable even
-  // while the gate is still showing. Without this check, clicking it
-  // would bypass lead capture entirely.
-  if (!leadCaptured) {
-    document.getElementById('lead-gate-panel').classList.add('open');
-    document.getElementById('lg-name')?.focus();
-    return;
-  }
   bkText();
   switchBkTab('new');
   document.getElementById('bk-err').textContent = '';
   resetNewApptView();
+  // Prefill from whatever the assistant has already gathered conversationally
+  // — if the visitor hasn't shared these yet, the fields just start blank
+  // and they fill them in here instead.
   if (leadCaptured) {
-    document.getElementById('bk-name').value = document.getElementById('lg-name').value.trim();
-    document.getElementById('bk-email').value = document.getElementById('lg-email').value.trim();
-    document.getElementById('bk-phone').value = document.getElementById('lg-phone').value.trim();
+    document.getElementById('bk-name').value = leadName;
+    document.getElementById('bk-email').value = leadEmail;
+    document.getElementById('bk-phone').value = leadPhone;
   }
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById('bk-date').min = today;

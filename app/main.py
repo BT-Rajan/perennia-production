@@ -147,6 +147,47 @@ class ChatRequest(BaseModel):
     message: str = Field(max_length=4000)
     history: list[ChatTurn] = Field(default_factory=list)
     sessionId: str = Field(default="", max_length=64)
+    leadCaptured: bool = False
+
+
+# Matches the hidden end-of-reply tag the assistant emits once it has
+# naturally gathered name/email/phone during the conversation (see
+# prompt.build_lead_capture_text). Parsed out and stored server-side —
+# the visitor never sees this tag, it's stripped before the reply goes out.
+LEAD_TAG_RE = re.compile(prompt_mod.LEAD_TAG_RE_SOURCE, re.IGNORECASE)
+SIMPLE_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _extract_conversational_lead(reply: str, lang: str) -> tuple[str, Optional[dict]]:
+    """Strips a [[LEAD_CAPTURED ...]] tag out of an assistant reply and, if
+    the values inside it look valid, returns a lead entry ready to store.
+    Always returns the cleaned reply, even if the lead itself is rejected —
+    the tag must never leak through to the visitor."""
+    match = LEAD_TAG_RE.search(reply)
+    if not match:
+        return reply, None
+
+    cleaned = (reply[:match.start()] + reply[match.end():]).strip()
+    name, email, phone = (g.strip() for g in match.groups())
+
+    if not (NAME_RE.match(name) and SIMPLE_EMAIL_RE.match(email) and PHONE_RE.match(phone)):
+        log.info("Ignored malformed conversational lead tag from LLM output.")
+        return cleaned, None
+
+    entry = {
+        "id": f"LD-{uuid.uuid4().hex[:8].upper()}",
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "lang": "ar" if lang == "ar" else "en",
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "status": "new",
+        "notes": "",
+        "appointment_id": None,
+        "nurture_sent_at": None,
+        "source": "chat",
+    }
+    return cleaned, entry
 
 
 @app.post("/api/chat")
@@ -182,7 +223,9 @@ async def chat(request: Request, body: ChatRequest):
         return {"reply": fallback, "turnsUsed": turns_used, "maxTurns": max_turns, "limitReached": False, "showBooking": False}
 
     kb = storage.load_knowledge_base()
-    system_prompt = prompt_mod.build_system_prompt(config, kb, lang, turns_used, max_turns)
+    system_prompt = prompt_mod.build_system_prompt(
+        config, kb, lang, turns_used, max_turns, lead_captured=body.leadCaptured,
+    )
 
     # Cap history so a visitor can't force unbounded token usage in one call.
     trimmed_history = [t.model_dump() for t in body.history[-20:]]
@@ -200,6 +243,13 @@ async def chat(request: Request, body: ChatRequest):
     except llm.LLMError as e:
         log.warning("LLM call failed: %s", e)
         raise HTTPException(status_code=e.status_code, detail="The assistant is temporarily unavailable.")
+
+    lead_result = None
+    if not body.leadCaptured:
+        reply, lead_entry = _extract_conversational_lead(reply, lang)
+        if lead_entry:
+            storage.add_lead(lead_entry)
+            lead_result = lead_entry
 
     # Determine if we should suggest booking
     booking_config = config.get("booking", {})
@@ -234,7 +284,7 @@ async def chat(request: Request, body: ChatRequest):
             if any(aff in user_msg_lower for aff in affirmative):
                 trigger_booking_modal = True
 
-    return {
+    response = {
         "reply": reply,
         "turnsUsed": turns_used,
         "maxTurns": max_turns,
@@ -243,12 +293,25 @@ async def chat(request: Request, body: ChatRequest):
         "bookingPrompts": booking_prompts,
         "triggerBooking": trigger_booking_modal,
     }
+    if lead_result:
+        response.update({
+            "leadCaptured": True,
+            "leadId": lead_result["id"],
+            "leadName": lead_result["name"],
+            "leadEmail": lead_result["email"],
+            "leadPhone": lead_result["phone"],
+        })
+    return response
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Public: leads — a visitor's contact details, captured once before
-# their first chat message. Deliberately minimal (name/email/phone
-# only): this is a capture point, not a transcript logger.
+# Public: leads — a visitor's contact details. Most leads now arrive
+# via /api/chat once the assistant has gathered name/email/phone
+# conversationally (see _extract_conversational_lead above); this
+# endpoint stays available as a general-purpose capture point for any
+# other flow (e.g. a standalone contact form) that wants one. Deliberately
+# minimal (name/email/phone only): this is a capture point, not a
+# transcript logger.
 # ═══════════════════════════════════════════════════════════════════
 
 class LeadRequest(BaseModel):
