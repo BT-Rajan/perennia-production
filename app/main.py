@@ -672,6 +672,7 @@ class ConfigUpdate(BaseModel):
     contact: Optional[dict] = None
     landing: Optional[dict] = None        # welcome text, tagline, nav links
     booking: Optional[dict] = None        # booking prompts and settings
+    nurture: Optional[dict] = None        # nurture follow-up email copy (en/ar)
 
 
 ALLOWED_PROVIDERS = {"anthropic", "deepseek", "openai", "custom"}
@@ -813,6 +814,17 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
         if "enabled" in body.booking:
             booking["enabled"] = bool(body.booking["enabled"])
         config["booking"] = booking
+
+    # Nurture follow-up email copy
+    if body.nurture is not None:
+        nurture_cfg = config.get("nurture", {})
+        for key in ["subject-en", "subject-ar"]:
+            if key in body.nurture:
+                nurture_cfg[key] = str(body.nurture[key])[:200]
+        for key in ["body-en", "body-ar"]:
+            if key in body.nurture:
+                nurture_cfg[key] = str(body.nurture[key])[:4000]
+        config["nurture"] = nurture_cfg
 
     if body.clearApiKey:
         config = storage.set_api_key(config, "")

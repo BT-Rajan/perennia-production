@@ -783,6 +783,35 @@
       <!-- LEADS -->
       <div class="panel" id="p-leads">
         <div class="ph"><h1>Leads</h1><p>Visitors who shared their details before chatting.</p></div>
+
+        <div class="card">
+          <div class="card-lbl">Nurture Follow-up Email</div>
+          <p style="font-size:0.78rem;color:var(--muted);margin:-0.3rem 0 0.9rem">
+            Sent once, automatically, to a lead who never booked. Use <code>{name}</code> anywhere to insert the visitor's name.
+          </p>
+          <div class="twin">
+            <div class="frow">
+              <label class="flabel">Subject <span class="badge ben">EN</span></label>
+              <input type="text" class="finput" id="nurture-subject-en" placeholder="Still thinking it over?">
+            </div>
+            <div class="frow">
+              <label class="flabel">Subject <span class="badge bar">AR</span></label>
+              <input type="text" class="finput" id="nurture-subject-ar" dir="rtl" placeholder="هل ما زلت مهتماً؟">
+            </div>
+          </div>
+          <div class="twin">
+            <div class="frow">
+              <label class="flabel">Message <span class="badge ben">EN</span></label>
+              <textarea class="fta" id="nurture-body-en" style="min-height:120px"></textarea>
+            </div>
+            <div class="frow">
+              <label class="flabel">Message <span class="badge bar">AR</span></label>
+              <textarea class="fta" id="nurture-body-ar" dir="rtl" style="min-height:120px"></textarea>
+            </div>
+          </div>
+          <button class="btn-save" onclick="saveNurtureCopy()">Save</button>
+        </div>
+
         <div class="card" style="margin-bottom:0">
           <div class="card-lbl">All Leads</div>
           <div class="kb-list" id="leads-list" style="display:flex;flex-direction:column;gap:0.5rem">
@@ -1033,6 +1062,38 @@ async function patchConfig(partial) {
   }
   serverConfig = await res.json();
   return serverConfig;
+}
+
+// ── Leads: nurture follow-up email copy ────────────────────
+const NURTURE_DEFAULTS = {
+  'nurture-subject-en': 'Still thinking it over?',
+  'nurture-subject-ar': 'هل ما زلت مهتماً؟',
+  'nurture-body-en': "Hi {name},\n\nWe noticed you reached out recently but didn't get a chance to book a time with us.\n\nIf you're still interested, we'd love to help — you can grab a slot any time straight from the chat widget on our site.\n\n— Perennia",
+  'nurture-body-ar': 'مرحباً {name}،\n\nلاحظنا أنك تواصلت معنا مؤخراً ولم تكمل حجز موعد بعد.\n\nإذا كنت لا تزال مهتماً، يسعدنا مساعدتك — يمكنك حجز موعد مباشرة من خلال نافذة الدردشة على موقعنا في أي وقت يناسبك.\n\n— بيرينيا',
+};
+const NURTURE_FIELD_KEY = { 'nurture-subject-en': 'subject-en', 'nurture-subject-ar': 'subject-ar', 'nurture-body-en': 'body-en', 'nurture-body-ar': 'body-ar' };
+
+function loadNurtureCopy() {
+  const saved = (serverConfig && serverConfig.nurture) || {};
+  Object.entries(NURTURE_DEFAULTS).forEach(([elId, def]) => {
+    const el = document.getElementById(elId);
+    const key = NURTURE_FIELD_KEY[elId];
+    if (el) el.value = key in saved ? saved[key] : def;
+  });
+}
+
+async function saveNurtureCopy() {
+  const data = {};
+  Object.keys(NURTURE_FIELD_KEY).forEach(elId => {
+    const el = document.getElementById(elId);
+    if (el) data[NURTURE_FIELD_KEY[elId]] = el.value;
+  });
+  try {
+    await patchConfig({ nurture: data });
+    toast('✔ Nurture email saved', 'ok');
+  } catch (e) {
+    toast(`✗ ${e.message}`, 'err');
+  }
 }
 
 // ── AI ────────────────────────────────────────────
@@ -1859,6 +1920,7 @@ async function init() {
   loadBranding();
   loadContact();
   loadLogos();
+  loadNurtureCopy();
   loadAnalytics();
   loadAppointments();
   loadLeads();

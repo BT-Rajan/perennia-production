@@ -39,26 +39,39 @@ def _due_leads() -> list[dict]:
     return due
 
 
+_DEFAULT_COPY = {
+    "subject-en": "Still thinking it over?",
+    "body-en": (
+        "Hi {name},\n\n"
+        "We noticed you reached out recently but didn't get a chance to "
+        "book a time with us.\n\n"
+        "If you're still interested, we'd love to help — you can grab a "
+        "slot any time straight from the chat widget on our site.\n\n— Perennia"
+    ),
+    "subject-ar": "هل ما زلت مهتماً؟",
+    "body-ar": (
+        "مرحباً {name}،\n\n"
+        "لاحظنا أنك تواصلت معنا مؤخراً ولم تكمل حجز موعد بعد.\n\n"
+        "إذا كنت لا تزال مهتماً، يسعدنا مساعدتك — يمكنك حجز موعد مباشرة "
+        "من خلال نافذة الدردشة على موقعنا في أي وقت يناسبك.\n\n— بيرينيا"
+    ),
+}
+
+
 def _nurture_copy(lead: dict) -> tuple[str, str]:
+    """Admin-editable via the Leads panel -> config.json["nurture"]. Falls
+    back to _DEFAULT_COPY for any key an admin hasn't customized (or on an
+    older data.json predating this setting) so a partial/missing config
+    never breaks the send. {name} is substituted here, server-side --
+    distinct from the {brand} placeholder used elsewhere in the app, which
+    is only ever substituted in the browser and never reaches an email."""
+    cfg = storage.load_config().get("nurture", {})
+    is_ar = lead.get("lang") == "ar"
+    suffix = "ar" if is_ar else "en"
     name = lead.get("name", "")
-    if lead.get("lang") == "ar":
-        subject = "هل ما زلت مهتماً؟ — بيرينيا"
-        body = (
-            f"مرحباً {name}،\n\n"
-            "لاحظنا أنك تواصلت معنا مؤخراً ولم تكمل حجز موعد بعد.\n\n"
-            "إذا كنت لا تزال مهتماً، يسعدنا مساعدتك — يمكنك حجز موعد مباشرة "
-            "من خلال نافذة الدردشة على موقعنا في أي وقت يناسبك.\n\n— بيرينيا"
-        )
-    else:
-        subject = "Still thinking it over?"
-        body = (
-            f"Hi {name},\n\n"
-            "We noticed you reached out recently but didn't get a chance to "
-            "book a time with us.\n\n"
-            "If you're still interested, we'd love to help — you can grab a "
-            "slot any time straight from the chat widget on our site.\n\n— Perennia"
-        )
-    return subject, body
+    subject = cfg.get(f"subject-{suffix}") or _DEFAULT_COPY[f"subject-{suffix}"]
+    body = cfg.get(f"body-{suffix}") or _DEFAULT_COPY[f"body-{suffix}"]
+    return subject.replace("{name}", name), body.replace("{name}", name)
 
 
 def run_once() -> int:

@@ -104,6 +104,27 @@ DEFAULT_CONFIG: dict[str, Any] = {
         ],
         "enabled": True,
     },
+    "nurture": {
+        # {name} is substituted server-side (app/nurture.py) with the
+        # lead's name — not the {brand} placeholder above, which is only
+        # ever substituted client-side in the browser and never reaches
+        # an outbound email.
+        "subject-en": "Still thinking it over?",
+        "body-en": (
+            "Hi {name},\n\n"
+            "We noticed you reached out recently but didn't get a chance to "
+            "book a time with us.\n\n"
+            "If you're still interested, we'd love to help — you can grab a "
+            "slot any time straight from the chat widget on our site.\n\n— Perennia"
+        ),
+        "subject-ar": "هل ما زلت مهتماً؟",
+        "body-ar": (
+            "مرحباً {name}،\n\n"
+            "لاحظنا أنك تواصلت معنا مؤخراً ولم تكمل حجز موعد بعد.\n\n"
+            "إذا كنت لا تزال مهتماً، يسعدنا مساعدتك — يمكنك حجز موعد مباشرة "
+            "من خلال نافذة الدردشة على موقعنا في أي وقت يناسبك.\n\n— بيرينيا"
+        ),
+    },
 }
 
 
