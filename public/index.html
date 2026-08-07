@@ -1286,7 +1286,19 @@ let lang = getInitialLang();
 let history = [];
 let busy = false;
 let aiAvatarSrc = null;
-let sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+// sessionId used to just be a fresh UUID on every page load — meaning a
+// simple refresh looked like a brand-new visitor to the backend (fresh
+// interaction stats, fresh lead-capture state) even though nothing about
+// the visitor's actual session had changed. Persisted per-tab instead, so
+// it stays stable across reloads and only resets when the tab/session
+// genuinely ends.
+const SESSION_ID_KEY = 'perennia_session_id';
+let sessionId = '';
+try { sessionId = sessionStorage.getItem(SESSION_ID_KEY) || ''; } catch (e) { /* private mode, etc. */ }
+if (!sessionId) {
+  sessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+  try { sessionStorage.setItem(SESSION_ID_KEY, sessionId); } catch (e) { /* private mode, etc. — non-fatal */ }
+}
 let chatLocked = false;
 // Lead capture now happens conversationally: the assistant itself asks for
 // name/email/phone naturally during the chat (see prompt.py), and the
@@ -1308,6 +1320,26 @@ try {
     leadPhone = saved.phone || '';
   }
 } catch (e) { /* private mode, etc. — non-fatal; assistant just asks again */ }
+
+// The chat transcript/history used to live only in a JS variable — a
+// reload, an accidental back/forward navigation, or the OS reclaiming a
+// backgrounded mobile tab wiped the entire conversation, including
+// whatever the assistant had already learned about the visitor. Persisted
+// per-tab (sessionStorage, not localStorage — a new tab still starts
+// fresh) alongside the sessionId above so both survive a reload together.
+const HISTORY_KEY = 'perennia_history';
+function persistHistory() {
+  try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (e) { /* private mode, etc. — non-fatal */ }
+}
+function restoreHistory() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(HISTORY_KEY) || 'null');
+    if (Array.isArray(saved) && saved.length) return saved;
+  } catch (e) { /* private mode, corrupted value, etc. — non-fatal */ }
+  return [];
+}
+history = restoreHistory();
+
 let chatOpen = false;
 let appointmentBooked = false;
 let pickedSlot = null;
@@ -1695,10 +1727,16 @@ function hideTyping() {
 
 // ── API call — talks only to our own backend at /api/chat. The backend holds the provider, model, and API key. ──
 async function callAI(userMessage) {
+  // `history` already has this turn's user message optimistically pushed
+  // onto it (see sendText) so it renders instantly and survives a reload
+  // even if this request fails. Exclude that last entry here since it's
+  // sent separately as `message` — otherwise the backend was receiving it
+  // twice in a row on every single turn.
+  const historyToSend = history.slice(0, -1);
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lang, message: userMessage, history, sessionId, leadCaptured })
+    body: JSON.stringify({ lang, message: userMessage, history: historyToSend, sessionId, leadCaptured })
   });
   if (!res.ok) throw new Error(`chat ${res.status}`);
   return res.json();
@@ -1747,6 +1785,7 @@ async function sendText(text) {
   setFaqDisabled(true);
   addMsg('user', text);
   history.push({ role: 'user', content: text });
+  persistHistory();
 
   showTyping();
   try {
@@ -1756,6 +1795,7 @@ async function sendText(text) {
     const nearLimit = !data.limitReached && data.maxTurns && (data.maxTurns - data.turnsUsed) <= 3;
     addMsg('ai', data.reply, { cta: data.limitReached || nearLimit });
     history.push({ role: 'assistant', content: data.reply });
+    persistHistory();
 
     if (data.limitReached) {
       lockChat();
@@ -1791,6 +1831,7 @@ function toggleLang() {
   lang = lang === 'en' ? 'ar' : 'en';
   try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) { /* private mode, etc. — non-fatal */ }
   history = [];
+  persistHistory();
   chatLocked = false;
   const inp = document.getElementById('input');
   inp.disabled = false;
@@ -2151,7 +2192,15 @@ document.addEventListener('DOMContentLoaded', () => {
   applyBrandConfig(null); // fills title/footer/wordmark/header/chips/etc. with defaults; real config overwrites these once initHome()'s fetch resolves
   initSidebarImage();
   renderUI();
-  addMsg('ai', COPY[lang].welcome);
+  // If we restored a transcript from this tab's earlier session (see
+  // restoreHistory() above), replay it into the chat instead of starting
+  // over with the generic greeting — a reload should feel like reopening
+  // the conversation, not losing it.
+  if (history.length) {
+    history.forEach(turn => addMsg(turn.role === 'assistant' ? 'ai' : 'user', turn.content));
+  } else {
+    addMsg('ai', COPY[lang].welcome);
+  }
 
   const inp = document.getElementById('input');
   inp.addEventListener('input', () => {
