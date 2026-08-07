@@ -6,8 +6,14 @@ ADMIN_CREDENTIALS.txt
 data/*.json
 !data/.gitkeep
 
-# Admin-uploaded assets (logo, avatar) — deployment-specific, not source
-public/static/images/logo_en.png
+# Admin-uploaded assets (logo, avatar) — deployment-specific, not source.
+# NOTE: logo_en.png is the exception — it's committed intentionally as the
+# shipped default brand logo, so a fresh clone/deploy isn't blank until an
+# admin uploads one. (It used to be listed here too, but .gitignore has no
+# effect on a file that's already tracked, so that line was a no-op that
+# just didn't match what the repo actually does — removed to avoid the
+# confusion of a "should be local-only" file that's actually version
+# controlled.) The other three are genuinely untracked and stay ignored.
 public/static/images/logo_ar.png
 public/static/images/ai_avatar.png
 public/static/images/ai_avatar.svg

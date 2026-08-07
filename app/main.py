@@ -1074,8 +1074,8 @@ async def upload_logo(
     if lang not in ("en", "ar"):
         raise HTTPException(400, "Invalid language.")
     raw = await logo.read()
-    if len(raw) > settings.MAX_UPLOAD_IMAGE_BYTES:
-        raise HTTPException(400, "File is too large (max 4 MB).")
+    if len(raw) > settings.MAX_UPLOAD_LOGO_BYTES:
+        raise HTTPException(400, "File is too large (max 8 MB).")
     _save_as_png(raw, IMAGES_DIR / f"logo_{lang}.png")
     import time
     timestamp = int(time.time() * 1000)  # milliseconds for cache-busting

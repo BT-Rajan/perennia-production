@@ -100,7 +100,14 @@ class Settings:
     RATE_LIMIT_CHAT: str = _get("RATE_LIMIT_CHAT", "20/minute")
     RATE_LIMIT_LOGIN: str = _get("RATE_LIMIT_LOGIN", "5/minute")
 
+    # Avatar (small, square, always heavily downscaled client-side).
     MAX_UPLOAD_IMAGE_BYTES: int = 4 * 1024 * 1024
+    # Logo (frontend's own dropzone check allows up to this — a high-res
+    # brand logo with transparency easily lands in the 4-8MB range, and
+    # the backend previously enforced the 4MB avatar limit here too,
+    # which meant a file the UI had already accepted would still get
+    # rejected server-side).
+    MAX_UPLOAD_LOGO_BYTES: int = 8 * 1024 * 1024
     MAX_UPLOAD_DOC_BYTES: int = 8 * 1024 * 1024
     KB_MAX_CHARS_PER_DOC: int = 50_000
     KB_MAX_TOTAL_ENTRIES: int = 100
