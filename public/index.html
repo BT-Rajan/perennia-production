@@ -142,10 +142,12 @@ body::before {
   white-space: nowrap;
 }
 
-/* ── Nav-link preview overlay: hovering (or tapping, on touch) an
-   admin-managed top-bar link dims the page and surfaces the content the
-   admin entered for it, staying up until the pointer leaves (desktop) or
-   the visitor taps away (touch). ── */
+/* ── Nav-link content panel: these top-bar items ("Our Work", "Contact
+   Us", etc.) used to be teasers that sent visitors off to a separate
+   page. They're first-class internal content now — same overlay
+   philosophy as the booking panel (dimmed backdrop, centered card, gold
+   accents), just carrying whatever the admin has written for that link,
+   in full, without ever leaving the app. ── */
 .nav-preview-backdrop {
   position: fixed; inset: 0; z-index: 210;
   background: rgba(4,12,28,0.6); backdrop-filter: blur(3px);
@@ -155,31 +157,31 @@ body::before {
 .nav-preview-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto; }
 .nav-preview-card {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -46%);
-  z-index: 211; width: min(440px, calc(100vw - 48px)); max-height: min(70vh, 520px);
+  z-index: 211; width: min(560px, calc(100vw - 48px)); max-height: min(78vh, 640px);
   overflow-y: auto;
   background: linear-gradient(160deg, rgba(255,255,255,0.1) 0%, rgba(107,170,232,0.08) 45%, rgba(4,26,62,0.85) 100%), var(--navy-2);
   border: 1px solid rgba(201,162,39,0.28);
   border-radius: 16px;
   box-shadow: 0 24px 70px rgba(0,0,0,0.45);
-  padding: 26px 26px 22px;
+  padding: 30px 30px 26px;
   opacity: 0; visibility: hidden; pointer-events: none;
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
 .nav-preview-backdrop.open .nav-preview-card { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, -50%); }
-.nav-preview-title { font-family: var(--font-en-display); font-size: 19px; font-weight: 600; color: var(--gold); margin-bottom: 10px; }
+.nav-preview-title { font-family: var(--font-en-display); font-size: 21px; font-weight: 600; color: var(--gold); margin-bottom: 14px; }
 [dir="rtl"] .nav-preview-title { font-family: var(--font-ar); font-weight: 500; }
-.nav-preview-body { font-size: 13.5px; line-height: 1.75; color: rgba(255,255,255,0.82); white-space: pre-line; }
+.nav-preview-body { font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.85); white-space: pre-line; }
 .nav-preview-visit {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 18px;
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 20px;
   background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--gold);
   font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-decoration: none;
   padding: 8px 16px; border-radius: 100px;
 }
 .nav-preview-close {
-  position: absolute; top: 12px; right: 14px; background: none; border: none;
-  color: rgba(255,255,255,0.5); font-size: 16px; cursor: pointer; line-height: 1;
+  position: absolute; top: 14px; right: 16px; background: none; border: none;
+  color: rgba(255,255,255,0.5); font-size: 18px; cursor: pointer; line-height: 1;
 }
-[dir="rtl"] .nav-preview-close { right: auto; left: 14px; }
+[dir="rtl"] .nav-preview-close { right: auto; left: 16px; }
 [dir="rtl"] .nav-preview-visit { flex-direction: row-reverse; }
 
 /* ── Wordmark fallback (shown if the admin hasn't uploaded a logo yet) ── */
@@ -1433,9 +1435,12 @@ function startSlideRotation() {
 }
 
 
-// ── Admin-managed top-bar links + their hover/tap preview overlay ──
+// ── Admin-managed top-bar links: internal content panels, not separate
+// pages. A link with content opens it right here in the same overlay
+// style the rest of the app already uses; a link with only a bare URL
+// (no content written for it) is a genuine external link and still just
+// navigates, since there's nothing of ours to show internally for it. ──
 window.navLinks = [];
-const isTouchDevice = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
 
 function renderNavLinks() {
   const container = document.getElementById('nav-links');
@@ -1447,17 +1452,10 @@ function renderNavLinks() {
     btn.className = 'nav-pill';
     btn.textContent = label;
     const hasContent = !!((lang === 'ar' ? link.content_ar : link.content_en) || link.content_en || link.content_ar);
-    if (hasContent) {
-      if (isTouchDevice) {
-        btn.onclick = (e) => { e.stopPropagation(); showNavPreview(link); };
-      } else {
-        btn.addEventListener('mouseenter', () => showNavPreview(link));
-        btn.addEventListener('mouseleave', hideNavPreview);
-        btn.onclick = (e) => { e.stopPropagation(); if (link.url) followNavLink(link.url); };
-      }
-    } else if (link.url) {
-      btn.onclick = (e) => { e.stopPropagation(); followNavLink(link.url); };
-    }
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      if (hasContent) showNavPreview(link); else if (link.url) followNavLink(link.url);
+    };
     container.appendChild(btn);
   });
 }
@@ -1490,9 +1488,6 @@ document.getElementById('nav-preview-backdrop').addEventListener('click', (e) =>
   if (e.target.id === 'nav-preview-backdrop') hideNavPreview();
 });
 document.getElementById('nav-preview-close').addEventListener('click', hideNavPreview);
-document.getElementById('nav-preview-card').addEventListener('mouseleave', () => {
-  if (!isTouchDevice) hideNavPreview();
-});
 
 function renderHomeUI() {
   const h = HOME_TXT[lang];
