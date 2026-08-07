@@ -14,6 +14,7 @@ Starts the Perennia server.
 Usage:
     python scripts/run_server.py
 """
+import os
 import sys
 import threading
 import webbrowser
@@ -25,8 +26,18 @@ import uvicorn
 from app.config import settings
 from app.logging_config import uvicorn_log_config
 
+# Auto-opening a browser tab makes sense for someone running this at a
+# desktop, but not when it's daemonized under a process manager (pm2,
+# systemd, Docker, ...) with no display attached — at best it's a no-op,
+# at worst it's a confusing error in the process manager's logs. Skip it
+# whenever there's no interactive terminal, or when NO_BROWSER is set
+# explicitly (ecosystem.config.js sets this for the pm2-managed process).
+_HEADLESS = not sys.stdout.isatty() or os.environ.get("NO_BROWSER") == "1"
+
 
 def _open_browser_later(url: str, delay: float = 2.0) -> None:
+    if _HEADLESS:
+        return
     threading.Timer(delay, lambda: webbrowser.open(url)).start()
 
 
