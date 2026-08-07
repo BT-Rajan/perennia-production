@@ -1059,11 +1059,46 @@ def _save_as_png(raw: bytes, dest: Path) -> None:
         img = img.convert("RGBA")
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    img.save(dest, format="PNG")
+    # Write to a temp file in the same directory and rename into place
+    # atomically, so a concurrent request/refresh can never see a
+    # partially-written image — and so a failed write can't silently
+    # leave a corrupt file at `dest` while we still report success.
+    tmp_dest = dest.with_suffix(dest.suffix + f".tmp-{uuid.uuid4().hex}")
+    try:
+        img.save(tmp_dest, format="PNG")
+        # fsync so the write is durable on disk before we rename it into
+        # place and report success — not just sitting in an OS buffer.
+        with open(tmp_dest, "r+b") as f:
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_dest, dest)
+    except Exception:
+        try:
+            tmp_dest.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise
+
+    # Belt-and-suspenders: don't report success unless the file we just
+    # wrote is actually readable at the path the static mount serves
+    # from. If this ever fails, it means IMAGES_DIR isn't the directory
+    # actually being served (e.g. a reverse proxy or a separate volume
+    # serving /static/ from somewhere else) — surface that loudly
+    # instead of returning {"ok": true} for a file nobody can reach.
+    if not dest.is_file() or dest.stat().st_size == 0:
+        raise HTTPException(
+            500,
+            "Image was processed but could not be verified on disk at the "
+            "path this server serves static files from. If you're running "
+            "behind a reverse proxy or CDN that serves /static/ directly "
+            "from a different directory/volume than this app writes to, "
+            "that mismatch is almost certainly the cause.",
+        )
 
 
 @app.post("/api/admin/upload-logo")
 async def upload_logo(
+    request: Request,
     session: dict = Depends(require_csrf),
     lang: str = Form(...),
     logo: UploadFile = File(...),
@@ -1079,7 +1114,12 @@ async def upload_logo(
     _save_as_png(raw, IMAGES_DIR / f"logo_{lang}.png")
     import time
     timestamp = int(time.time() * 1000)  # milliseconds for cache-busting
-    return {"ok": True, "url": f"static/images/logo_{lang}.png?t={timestamp}"}
+    rel_url = f"static/images/logo_{lang}.png?t={timestamp}"
+    # Absolute URL too, so the admin panel can show/link the real
+    # reachable address rather than a path that only resolves correctly
+    # if the page it's shown on happens to be at the site root.
+    abs_url = str(request.base_url).rstrip("/") + "/" + rel_url
+    return {"ok": True, "url": rel_url, "absoluteUrl": abs_url}
 
 
 @app.post("/api/admin/delete-logo")
@@ -1092,7 +1132,7 @@ async def delete_logo(body: dict, session: dict = Depends(require_csrf)):
 
 
 @app.post("/api/admin/upload-avatar")
-async def upload_avatar(session: dict = Depends(require_csrf), avatar: UploadFile = File(...)):
+async def upload_avatar(request: Request, session: dict = Depends(require_csrf), avatar: UploadFile = File(...)):
     """Upload and save AI assistant avatar image. Automatically reprocessed
     through Pillow for security. Cache-buster timestamp included in response."""
     raw = await avatar.read()
@@ -1101,7 +1141,9 @@ async def upload_avatar(session: dict = Depends(require_csrf), avatar: UploadFil
     _save_as_png(raw, IMAGES_DIR / "ai_avatar.png")
     import time
     timestamp = int(time.time() * 1000)
-    return {"ok": True, "url": f"static/images/ai_avatar.png?t={timestamp}"}
+    rel_url = f"static/images/ai_avatar.png?t={timestamp}"
+    abs_url = str(request.base_url).rstrip("/") + "/" + rel_url
+    return {"ok": True, "url": rel_url, "absoluteUrl": abs_url}
 
 
 @app.post("/api/admin/delete-avatar")

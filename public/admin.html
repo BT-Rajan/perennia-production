@@ -1295,7 +1295,7 @@ async function saveTone() {
 }
 
 // ── Assistant: Avatar ───────────────────────────────────────
-function loadAvatarPreview() {
+function loadAvatarPreview(justUploadedResEl) {
   const prev = document.getElementById('prev-avatar');
   const src = 'static/images/ai_avatar.png?t=' + Date.now();
   const img = new Image();
@@ -1306,6 +1306,13 @@ function loadAvatarPreview() {
   img.onerror = () => {
     prev.innerHTML = '<div class="logo-empty">No avatar uploaded</div>';
     document.getElementById('d-assistant').textContent = 'Default avatar & tone';
+    if (justUploadedResEl) {
+      const warn = document.createElement('div');
+      warn.textContent = '⚠ Uploaded, but this server could not load it back from that URL — the app and the web server may be serving /static/ from different places (reverse proxy, CDN, or a separate volume/container). Check with whoever manages the deployment.';
+      warn.style.marginTop = '4px';
+      warn.className = 'up-err';
+      justUploadedResEl.appendChild(warn);
+    }
   };
   img.src = src;
 }
@@ -1322,14 +1329,14 @@ async function processAvatar(file) {
     const form = new FormData();
     form.append('avatar', file);
     const res = await adminFetch('/api/admin/upload-avatar', { method: 'POST', body: form });
+    const body = await res.json().catch(() => ({}));
     if (res.ok) {
-      showRes(resEl, `✔ ${file.name} saved`, 'ok');
+      showRes(resEl, `✔ ${file.name} saved —`, 'ok', body.absoluteUrl || body.url);
       toast('✔ Avatar saved', 'ok');
-      loadAvatarPreview();
+      loadAvatarPreview(resEl);
       return;
     }
-    const err = await res.json().catch(() => ({}));
-    showRes(resEl, `✗ ${err.detail || 'Upload failed'}`, 'err');
+    showRes(resEl, `✗ ${body.detail || 'Upload failed'}`, 'err');
   } catch {
     showRes(resEl, '✗ Could not reach server.', 'err');
   }
@@ -1484,7 +1491,7 @@ async function saveContact() {
 }
 
 // ── Logo ──────────────────────────────────────────
-function loadLogos() {
+function loadLogos(justUploadedResEl) {
   ['en', 'ar'].forEach(lng => {
     const src = `static/images/logo_${lng}.png?t=` + Date.now();
     const img = new Image();
@@ -1494,6 +1501,20 @@ function loadLogos() {
     };
     img.onerror = () => {
       document.getElementById(`prev-${lng}`).innerHTML = '<div class="logo-empty">No logo uploaded yet</div>';
+      // If this is the language we *just* uploaded (server said 200 OK,
+      // link shown above), the browser failing to load it back means the
+      // upload succeeded but the file isn't reachable at that URL — a
+      // reverse proxy / CDN / separate static volume serving a different
+      // directory than this app writes to is the most likely cause.
+      // Say that plainly instead of silently falling back to the normal
+      // "nothing uploaded" empty state, which would be misleading here.
+      if (justUploadedResEl && document.getElementById(`res-${lng}`) === justUploadedResEl) {
+        const warn = document.createElement('div');
+        warn.textContent = '⚠ Uploaded, but this server could not load it back from that URL — the app and the web server may be serving /static/ from different places (reverse proxy, CDN, or a separate volume/container). Check with whoever manages the deployment.';
+        warn.style.marginTop = '4px';
+        warn.className = 'up-err';
+        justUploadedResEl.appendChild(warn);
+      }
     };
     img.src = src;
   });
@@ -1540,22 +1561,42 @@ async function processLogo(lng, file) {
     form.append('lang', lng);
     form.append('logo', file);
     const res = await adminFetch('/api/admin/upload-logo', { method: 'POST', body: form });
+    const body = await res.json().catch(() => ({}));
     if (res.ok) {
-      showRes(resEl, `✔ ${file.name} saved`, 'ok');
+      showRes(resEl, `✔ ${file.name} saved —`, 'ok', body.absoluteUrl || body.url);
       toast(`✔ ${lng.toUpperCase()} logo saved`, 'ok');
       lblEl.textContent = file.name;
       document.getElementById('d-logo').textContent = 'Logo uploaded';
-      loadLogos();
+      loadLogos(resEl);
       return;
     }
-    const err = await res.json().catch(() => ({}));
-    showRes(resEl, `✗ ${err.detail || 'Upload failed'}`, 'err');
+    showRes(resEl, `✗ ${body.detail || 'Upload failed'}`, 'err');
   } catch {
     showRes(resEl, '✗ Could not reach server.', 'err');
   }
 }
 
-function showRes(el, msg, type) { el.textContent = msg; el.className = `up-res ${type === 'ok' ? 'up-ok' : 'up-err'}`; el.style.display = 'block'; }
+function showRes(el, msg, type, linkUrl) {
+  el.textContent = msg;
+  el.className = `up-res ${type === 'ok' ? 'up-ok' : 'up-err'}`;
+  el.style.display = 'block';
+  // Built via createElement/appendChild rather than innerHTML — msg and
+  // linkUrl both ultimately trace back to values a logged-in admin
+  // supplied (filename, server-returned URL), but there's no reason to
+  // risk HTML injection through them when plain DOM nodes are just as
+  // easy and rule it out entirely.
+  if (linkUrl) {
+    const link = document.createElement('a');
+    link.href = linkUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = linkUrl;
+    link.style.display = 'block';
+    link.style.marginTop = '4px';
+    link.style.wordBreak = 'break-all';
+    el.appendChild(link);
+  }
+}
 
 async function clearLogo(lng) {
   try {
