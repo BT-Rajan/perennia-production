@@ -24,16 +24,16 @@ _service_lock = threading.Lock()
 
 def _get_service():
     global _service, _service_load_attempted
-    # Fast path: no lock needed once initialization has already happened
-    # (successfully or not) — this keeps the common case cheap.
+    # Fast path: no lock needed once initialization has succeeded.
     if _service is not None:
         return _service
-    if _service_load_attempted:
-        return None
 
+    # Everything else — including the "already tried and failed" check —
+    # happens inside the lock. Reading _service_load_attempted outside the
+    # lock (as a "fast path") would let a concurrent request observe the
+    # flag as True while the first thread is still mid-initialization,
+    # and wrongly conclude the calendar is unconfigured.
     with _service_lock:
-        # Re-check inside the lock: another thread may have already run
-        # initialization while we were waiting for it.
         if _service is not None:
             return _service
         if _service_load_attempted:
@@ -46,12 +46,16 @@ def _get_service():
         try:
             from google.oauth2 import service_account
             from googleapiclient.discovery import build
+            import httplib2
 
             creds = service_account.Credentials.from_service_account_file(
                 settings.GOOGLE_SERVICE_ACCOUNT_FILE,
                 scopes=["https://www.googleapis.com/auth/calendar"],
             )
-            _service = build("calendar", "v3", credentials=creds, cache_discovery=False)
+            # Explicit timeout so a slow/unresponsive Google API can't hang
+            # a request worker indefinitely.
+            http = httplib2.Http(timeout=10)
+            _service = build("calendar", "v3", credentials=creds, http=http, cache_discovery=False)
             return _service
         except Exception as e:
             log.warning("Google Calendar not available: %s", e)

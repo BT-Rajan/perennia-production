@@ -23,6 +23,26 @@ def _get(name: str, default: str | None = None, required: bool = False) -> str:
     return val
 
 
+def _validate_timezone(tz_name: str) -> str:
+    """Fail fast at startup on a bad APPT_TIMEZONE instead of raising the
+    first time a visitor tries to book (or, worse, silently misbehaving)."""
+    if not tz_name:
+        print("FATAL: APPT_TIMEZONE is empty.", file=sys.stderr)
+        sys.exit(1)
+    try:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(tz_name)
+    except Exception as e:
+        print(
+            f"FATAL: Invalid APPT_TIMEZONE '{tz_name}': {e}\n"
+            "Set it to a valid IANA timezone (e.g. 'America/New_York', 'Asia/Kuwait'). "
+            "See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return tz_name
+
+
 class Settings:
     # Where config.json / knowledge_base.json live. MUST be outside of
     # any directory served as static files.
@@ -89,7 +109,7 @@ class Settings:
     MAX_CHAT_EXCHANGES: int = int(_get("MAX_CHAT_EXCHANGES", "15"))
 
     # ── Appointment booking ────────────────────────────────────────
-    APPT_TIMEZONE: str = _get("APPT_TIMEZONE", "Asia/Kuwait")
+    APPT_TIMEZONE: str = _validate_timezone(_get("APPT_TIMEZONE", "Asia/Kuwait"))
     APPT_SLOT_MINUTES: int = int(_get("APPT_SLOT_MINUTES", "30"))
     APPT_DAY_START_HOUR: int = int(_get("APPT_DAY_START_HOUR", "9"))
     APPT_DAY_END_HOUR: int = int(_get("APPT_DAY_END_HOUR", "17"))

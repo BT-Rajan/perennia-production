@@ -6,6 +6,21 @@ browser only ever sends/receives chat turns.
 """
 from typing import Any
 
+
+def _sanitize_kb_content(text: str, max_lines: int = 50) -> str:
+    """Defense-in-depth against prompt injection via admin-uploaded
+    knowledge-base documents: cap how much of any one document reaches
+    the system prompt, so a huge or adversarially-crafted upload can't
+    crowd out or override the actual instructions above it. Delimiters
+    are added by the caller, around each document."""
+    if not text:
+        return ""
+    lines = text.split("\n")
+    if len(lines) > max_lines:
+        lines = lines[:max_lines] + ["[... truncated ...]"]
+    return "\n".join(lines)
+
+
 DEFAULT_KNOWLEDGE = """
 COMPANY: Perennia — AI-powered technology and innovation company.
 TAGLINE: "Solving Today. Shaping Tomorrow." (Arabic: حلول اليوم لصناعة الغد)
@@ -176,7 +191,9 @@ def build_system_prompt(
     kb_text = ""
     if knowledge_base:
         docs = "\n\n".join(
-            f"— {f.get('filename', 'untitled')} —\n{f.get('text', '')}"
+            f"--- DOCUMENT START: {f.get('filename', 'untitled')} ---\n"
+            f"{_sanitize_kb_content(f.get('text', ''))}\n"
+            f"--- DOCUMENT END ---"
             for f in knowledge_base
             if f.get("ok") and f.get("text")
         )

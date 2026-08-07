@@ -9,7 +9,9 @@ panel only ever sees a masked hint of the key it already saved.
 import datetime
 import io
 import logging
+import os
 import re
+import sys
 import threading
 import uuid
 from pathlib import Path
@@ -32,13 +34,58 @@ from app import storage, llm, extract, gcal, scheduling, notifications, nurture
 from app import prompt as prompt_mod
 from app.security import (
     verify_password, create_session_token, verify_session_token,
-    new_csrf_token, csrf_tokens_match, mask_key,
+    new_csrf_token, csrf_tokens_match, mask_key, revoke_session_token,
 )
 
 from app.logging_config import configure_app_logging
 
 configure_app_logging()
 log = logging.getLogger("perennia")
+
+# ── Single-instance lock ────────────────────────────────────────────
+# Storage is local JSON files, not a shared DB (see storage.py) — two
+# processes writing the same data directory at once would silently
+# corrupt it. Take an exclusive lock on a marker file in DATA_DIR for
+# the life of the process; refuse to start if another instance already
+# holds it. POSIX uses flock; Windows uses msvcrt's file-region locking
+# (the same file, locked the OS-appropriate way) so this still works
+# under install.bat/start.bat deployments.
+def _acquire_instance_lock() -> None:
+    settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    lock_path = settings.DATA_DIR / ".instance_lock"
+    try:
+        fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR, 0o666)
+    except OSError as e:
+        log.error("FATAL: could not open instance lock file %s: %s", lock_path, e)
+        sys.exit(1)
+
+    try:
+        if os.name == "nt":
+            import msvcrt
+            try:
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            except OSError:
+                raise
+        else:
+            import fcntl
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                raise
+    except OSError:
+        log.error(
+            "FATAL: another Perennia instance already has %s open. "
+            "Running multiple instances against the same data directory "
+            "is not supported (would corrupt the local JSON storage).",
+            lock_path,
+        )
+        os.close(fd)
+        sys.exit(1)
+    # Intentionally leak `fd` open for the lifetime of the process — the
+    # OS releases the lock automatically when the process exits.
+
+
+_acquire_instance_lock()
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -628,8 +675,10 @@ async def admin_login(request: Request, response: Response, body: LoginRequest):
         body.username.strip() == settings.ADMIN_USERNAME
         and verify_password(body.password, settings.ADMIN_PASSWORD_HASH)
     )
+    client_ip = request.client.host if request.client else "unknown"
     if not valid:
         # Generic message — never reveal whether the username or password was wrong.
+        log.warning("Failed admin login attempt from %s for user '%s'", client_ip, body.username.strip())
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
     csrf = new_csrf_token()
@@ -643,11 +692,19 @@ async def admin_login(request: Request, response: Response, body: LoginRequest):
         max_age=settings.SESSION_TTL_SECONDS,
         path="/",
     )
+    log.info("Admin login successful for user '%s' from %s", body.username.strip(), client_ip)
     return {"ok": True, "csrfToken": csrf, "username": body.username.strip()}
 
 
 @app.post("/api/admin/logout")
-async def admin_logout(response: Response):
+async def admin_logout(request: Request, response: Response):
+    # Revoke the session token immediately rather than relying solely on
+    # the browser honoring the cookie deletion — a captured/replayed
+    # token would otherwise stay valid until its TTL naturally expires.
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        revoke_session_token(token)
+        log.info("Admin session revoked (logout)")
     response.delete_cookie(SESSION_COOKIE, path="/")
     return {"ok": True}
 
@@ -676,6 +733,39 @@ class ConfigUpdate(BaseModel):
 
 
 ALLOWED_PROVIDERS = {"anthropic", "deepseek", "openai", "custom"}
+
+
+def _validate_custom_provider_url(url: str) -> str:
+    """Basic SSRF guard on the admin-configurable "custom" LLM provider
+    URL: this server will make outbound requests to whatever is saved
+    here (see llm.py), so reject anything that isn't a plausible public
+    HTTP(S) endpoint. This is defense-in-depth (the admin panel is
+    already authenticated) against a compromised admin session or a
+    mistaken paste being used to pivot at internal services/metadata
+    endpoints. Note: checking the literal hostname doesn't catch DNS
+    rebinding (a hostname that resolves to a private IP only at request
+    time) — this blocks the obvious/accidental cases, not a determined
+    attacker with an already-compromised admin session."""
+    if not url or not url.strip():
+        return ""  # blank = fall back to the provider's default endpoint
+    url = url.strip()
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(400, "Custom provider URL must use http or https.")
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise HTTPException(400, "Custom provider URL must include a domain.")
+    if hostname == "localhost":
+        raise HTTPException(400, "Custom provider URL may not point at localhost.")
+    try:
+        import ipaddress
+        ip = ipaddress.ip_address(hostname)
+    except ValueError:
+        ip = None  # not a literal IP — a hostname, allow it through
+    if ip is not None and (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved):
+        raise HTTPException(400, "Custom provider URL may not point at a private/internal address.")
+    return url[:500]
+
 
 # Landing page links (Our Work / Contact Us) go straight into
 # `window.location.href` / `window.open` on the frontend with no further
@@ -768,21 +858,39 @@ async def get_config(session: dict = Depends(get_session)):
 @app.post("/api/admin/config")
 async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf)):
     config = storage.load_config()
+    changes = []
 
     if body.provider is not None:
         if body.provider not in ALLOWED_PROVIDERS:
             raise HTTPException(400, "Unknown provider.")
-        config["provider"] = body.provider
+        if config.get("provider") != body.provider:
+            changes.append(f"provider: {config.get('provider')} → {body.provider}")
+            config["provider"] = body.provider
     if body.model is not None:
-        config["model"] = body.model.strip()[:200]
+        new_model = body.model.strip()[:200]
+        if config.get("model") != new_model:
+            changes.append("model changed")
+            config["model"] = new_model
     if body.baseUrl is not None:
-        config["baseUrl"] = body.baseUrl.strip()[:500]
+        new_url = _validate_custom_provider_url(body.baseUrl)
+        if config.get("baseUrl") != new_url:
+            changes.append("baseUrl changed")
+            config["baseUrl"] = new_url
     if body.tone is not None:
-        config["tone"] = body.tone.strip()[:4000]
+        new_tone = body.tone.strip()[:4000]
+        if config.get("tone") != new_tone:
+            changes.append("tone changed")
+            config["tone"] = new_tone
     if body.knowledge is not None:
-        config["knowledge"] = {str(k): str(v)[:20000] for k, v in body.knowledge.items()}
+        new_knowledge = {str(k): str(v)[:20000] for k, v in body.knowledge.items()}
+        if config.get("knowledge") != new_knowledge:
+            changes.append("knowledge changed")
+            config["knowledge"] = new_knowledge
     if body.contact is not None:
-        config["contact"] = {str(k): str(v)[:500] for k, v in body.contact.items()}
+        new_contact = {str(k): str(v)[:500] for k, v in body.contact.items()}
+        if config.get("contact") != new_contact:
+            changes.append("contact information changed")
+            config["contact"] = new_contact
     
     # Landing page config
     if body.landing is not None:
@@ -803,6 +911,7 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
             elif key in ["chatChips-en", "chatChips-ar"]:
                 landing[key] = [str(c)[:200] for c in value][:6]
         config["landing"] = landing
+        changes.append("landing config changed")
     
     # Booking prompts config
     if body.booking is not None:
@@ -814,6 +923,7 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
         if "enabled" in body.booking:
             booking["enabled"] = bool(body.booking["enabled"])
         config["booking"] = booking
+        changes.append("booking config changed")
 
     # Nurture follow-up email copy
     if body.nurture is not None:
@@ -825,11 +935,17 @@ async def update_config(body: ConfigUpdate, session: dict = Depends(require_csrf
             if key in body.nurture:
                 nurture_cfg[key] = str(body.nurture[key])[:4000]
         config["nurture"] = nurture_cfg
+        changes.append("nurture config changed")
 
     if body.clearApiKey:
+        changes.append("API key cleared")
         config = storage.set_api_key(config, "")
     elif body.apiKey:
+        changes.append("API key updated")
         config = storage.set_api_key(config, body.apiKey.strip())
+
+    if changes:
+        log.info("Admin config updated: %s", ", ".join(changes))
 
     storage.save_config(config)
     return _public_config_view(config)
@@ -862,7 +978,8 @@ async def list_knowledge(session: dict = Depends(get_session)):
 
 
 @app.post("/api/admin/upload-knowledge")
-async def upload_knowledge(session: dict = Depends(require_csrf), file: UploadFile = File(...)):
+@limiter.limit("10/hour")  # cap uploads to blunt disk-exhaustion DoS via repeated large files
+async def upload_knowledge(request: Request, session: dict = Depends(require_csrf), file: UploadFile = File(...)):
     raw = await file.read()
     if len(raw) > settings.MAX_UPLOAD_DOC_BYTES:
         raise HTTPException(400, "File is too large (max 8 MB).")
@@ -891,7 +1008,9 @@ async def upload_knowledge(session: dict = Depends(require_csrf), file: UploadFi
     storage.save_knowledge_base(entries)
 
     if not ok:
+        log.warning("Knowledge base upload failed for file '%s': %s", filename, error_msg)
         return JSONResponse(status_code=400, content={"ok": False, "error": error_msg})
+    log.info("Knowledge base file uploaded: '%s' (%d chars)", filename, len(text))
     return {"ok": True, "id": entry["id"], "chars": entry["chars"], "truncated": truncated}
 
 
@@ -901,7 +1020,11 @@ class DeleteKnowledgeRequest(BaseModel):
 
 @app.post("/api/admin/delete-knowledge")
 async def delete_knowledge(body: DeleteKnowledgeRequest, session: dict = Depends(require_csrf)):
-    entries = [e for e in storage.load_knowledge_base() if e.get("id") != body.id]
+    entries = storage.load_knowledge_base()
+    deleted = next((e for e in entries if e.get("id") == body.id), None)
+    if deleted:
+        log.info("Knowledge base file deleted: '%s'", deleted.get("filename"))
+    entries = [e for e in entries if e.get("id") != body.id]
     storage.save_knowledge_base(entries)
     return {"ok": True}
 

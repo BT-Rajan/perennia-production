@@ -63,10 +63,10 @@ def available_slots(date_str: str) -> list[dict]:
         is_locally_booked = (cursor.isoformat(), slot_end.isoformat()) in booked
         is_calendar_busy = any(cursor < b_end and slot_end > b_start for b_start, b_end in busy_ranges)
         if not is_past and not is_locally_booked and not is_calendar_busy:
-            try:
-                label = cursor.strftime("%-I:%M %p")
-            except ValueError:
-                label = cursor.strftime("%I:%M %p").lstrip("0")
+            # %-I (no leading zero) is a glibc/macOS extension that isn't
+            # supported on Windows strftime. %I + lstrip is fully portable
+            # and gives the same "9:00 AM" / "12:00 PM" formatting.
+            label = cursor.strftime("%I:%M %p").lstrip("0")
             slots.append({"start": cursor.isoformat(), "end": slot_end.isoformat(), "label": label})
         cursor = slot_end
     return slots

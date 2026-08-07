@@ -63,8 +63,8 @@ async def chat_completion(
                     raise LLMError(f"Anthropic API error ({resp.status_code}).", 502)
                 try:
                     data = resp.json()
-                except ValueError:
-                    raise LLMError("Anthropic API returned an invalid (non-JSON) response.", 502)
+                except (ValueError, httpx.ResponseNotRead) as e:
+                    raise LLMError(f"Anthropic API returned an invalid (non-JSON) response: {e}", 502)
                 return "".join(b.get("text", "") for b in data.get("content", []))
 
             # DeepSeek / OpenAI / any OpenAI-compatible custom endpoint
@@ -85,8 +85,8 @@ async def chat_completion(
                 raise LLMError(f"{provider} API error ({resp.status_code}).", 502)
             try:
                 data = resp.json()
-            except ValueError:
-                raise LLMError(f"{provider} API returned an invalid (non-JSON) response.", 502)
+            except (ValueError, httpx.ResponseNotRead) as e:
+                raise LLMError(f"{provider} API returned an invalid (non-JSON) response: {e}", 502)
             try:
                 return data["choices"][0]["message"]["content"]
             except (KeyError, IndexError, TypeError):

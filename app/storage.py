@@ -130,11 +130,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
 
 def _atomic_write_json(path: Path, data: Any) -> None:
     tmp_path = path.with_suffix(path.suffix + f".tmp-{uuid.uuid4().hex}")
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp_path, path)  # atomic on POSIX
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)  # atomic on POSIX
+    except Exception:
+        # Don't leave a half-written .tmp-* file behind on failure (disk
+        # full, permissions, etc.) — clean up before propagating.
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise
 
 
 def _migrate_legacy_nav_links(config: dict[str, Any]) -> None:
@@ -269,41 +278,52 @@ def add_lead(entry: dict[str, Any]) -> dict[str, Any]:
 # Daily interaction stats (admin analytics — no PII, just counters)
 # ═══════════════════════════════════════════════════════════════════
 
-def _load_stats() -> dict[str, Any]:
-    with _lock:
-        if not STATS_PATH.exists():
-            return {}
-        try:
-            with open(STATS_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except (json.JSONDecodeError, OSError):
-            return {}
-        return data if isinstance(data, dict) else {}
+def _read_stats_unlocked() -> dict[str, Any]:
+    """Caller must hold _lock. Not exported — see _load_stats_locked() /
+    the record_* functions below for the locked entry points."""
+    if not STATS_PATH.exists():
+        return {}
+    try:
+        with open(STATS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
-def _save_stats(data: dict[str, Any]) -> None:
+def _write_stats_unlocked(data: dict[str, Any]) -> None:
+    """Caller must hold _lock."""
     # Prune old days so this file can never grow unbounded.
     if len(data) > STATS_RETENTION_DAYS:
         for day in sorted(data.keys())[: len(data) - STATS_RETENTION_DAYS]:
             data.pop(day, None)
+    _atomic_write_json(STATS_PATH, data)
+
+
+def _load_stats() -> dict[str, Any]:
     with _lock:
-        _atomic_write_json(STATS_PATH, data)
+        return _read_stats_unlocked()
 
 
 def record_interaction(date_str: str, session_id: str) -> None:
-    data = _load_stats()
-    day = data.setdefault(date_str, {"messages": 0, "sessions": []})
-    day["messages"] += 1
-    if session_id and session_id not in day["sessions"]:
-        day["sessions"].append(session_id)
-    _save_stats(data)
+    # The whole read-modify-write must be one critical section, or two
+    # concurrent chat requests can both read the same counts and each
+    # write back N+1, silently losing one increment.
+    with _lock:
+        data = _read_stats_unlocked()
+        day = data.setdefault(date_str, {"messages": 0, "sessions": []})
+        day["messages"] += 1
+        if session_id and session_id not in day["sessions"]:
+            day["sessions"].append(session_id)
+        _write_stats_unlocked(data)
 
 
 def record_appointment_stat(date_str: str) -> None:
-    data = _load_stats()
-    day = data.setdefault(date_str, {"messages": 0, "sessions": [], "appointments": 0})
-    day["appointments"] = day.get("appointments", 0) + 1
-    _save_stats(data)
+    with _lock:
+        data = _read_stats_unlocked()
+        day = data.setdefault(date_str, {"messages": 0, "sessions": [], "appointments": 0})
+        day["appointments"] = day.get("appointments", 0) + 1
+        _write_stats_unlocked(data)
 
 
 def daily_summary(days: int = 14) -> list[dict[str, Any]]:
