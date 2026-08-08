@@ -30,6 +30,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; width: 100%; }
 
+/* ── Keyboard focus visibility ──
+   Buttons/pills/chips/slots have their own hover treatments but no
+   :focus style, so keyboard users tabbing through them get no visible
+   indicator of where focus is. This adds one consistent ring, shown
+   only for keyboard focus (:focus-visible) so mouse clicks stay clean. */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 :root {
   /* ── Exact colors sampled from official Perennia logos ── */
   --navy-1: #000e28;
@@ -904,7 +914,7 @@ main.chat-main {
 
           <div class="chat-conversation-wrap">
             <div class="chat-conversation" id="chat-conversation">
-              <div class="chat-messages" id="messages"></div>
+              <div class="chat-messages" id="messages" aria-live="polite" aria-relevant="additions"></div>
               <div class="chips" id="chips"></div>
               <div class="chat-input-area">
                 <textarea class="chat-input" id="input" rows="1"></textarea>
@@ -918,17 +928,17 @@ main.chat-main {
 
             <!-- ─── Talk to Us — lives inside the chat shell itself, synced with the
                  conversation (same session, posts its result back into the transcript) ─── -->
-            <div class="booking-panel" id="booking-panel">
-              <button class="booking-close" id="booking-close-btn" onclick="closeBooking()">✕</button>
+            <div class="booking-panel" id="booking-panel" role="dialog" aria-modal="true" aria-labelledby="bk-title">
+              <button class="booking-close" id="booking-close-btn" onclick="closeBooking()" aria-label="Close">✕</button>
 
-              <div class="booking-badge">📅</div>
+              <div class="booking-badge" aria-hidden="true">📅</div>
               <h3 id="bk-title">Talk to Us</h3>
               <p id="bk-sub">Pick a time that works for you — we'll confirm by email.</p>
               <div class="booking-head-divider"></div>
 
-              <div class="bk-tabs">
-                <button class="bk-tab active" id="bk-tab-new" onclick="switchBkTab('new')">New Appointment</button>
-                <button class="bk-tab" id="bk-tab-manage" onclick="switchBkTab('manage')">Manage Booking</button>
+              <div class="bk-tabs" role="tablist">
+                <button class="bk-tab active" id="bk-tab-new" onclick="switchBkTab('new')" role="tab" aria-selected="true" aria-controls="bk-new-view">New Appointment</button>
+                <button class="bk-tab" id="bk-tab-manage" onclick="switchBkTab('manage')" role="tab" aria-selected="false" aria-controls="bk-manage-view">Manage Booking</button>
               </div>
 
               <!-- New appointment -->
@@ -946,7 +956,7 @@ main.chat-main {
                 <div class="bk-field"><label id="bk-lbl-phone">Phone (optional)</label><input id="bk-phone" type="tel" autocomplete="tel"></div>
                 <div class="bk-field"><label id="bk-lbl-service">What are you interested in? (optional)</label><input id="bk-service" type="text" maxlength="200"></div>
                 <div class="bk-field"><label id="bk-lbl-notes">Notes (optional)</label><textarea id="bk-notes" rows="2" maxlength="1000"></textarea></div>
-                <div class="bk-err" id="bk-err"></div>
+                <div class="bk-err" id="bk-err" role="alert" aria-live="assertive"></div>
                 <div class="booking-foot">
                   <button class="btn-2" id="bk-cancel-btn" onclick="closeBooking()">Cancel</button>
                   <button class="send-btn-wide" id="bk-submit-btn" onclick="submitBooking()">Confirm Booking</button>
@@ -958,7 +968,7 @@ main.chat-main {
                 <div id="bk-lookup-form">
                   <div class="bk-field"><label id="bk-lbl-lookup-id">Appointment ID</label><input id="bk-lookup-id" type="text" placeholder="PRN-XXXXXXXX" autocomplete="off"></div>
                   <div class="bk-field"><label id="bk-lbl-lookup-email">Email used to book</label><input id="bk-lookup-email" type="email" autocomplete="email"></div>
-                  <div class="bk-err" id="bk-lookup-err"></div>
+                  <div class="bk-err" id="bk-lookup-err" role="alert" aria-live="assertive"></div>
                   <button class="send-btn-wide" id="bk-lookup-btn" onclick="lookupAppointment()" style="width:100%">Find My Appointment</button>
                 </div>
 
@@ -980,7 +990,7 @@ main.chat-main {
                       <label id="bk-lbl-re-slot">Available times</label>
                       <div class="bk-slots" id="bk-re-slots"><div class="bk-slots-empty" id="bk-re-slots-msg">Pick a date to see available times</div></div>
                     </div>
-                    <div class="bk-err" id="bk-re-err"></div>
+                    <div class="bk-err" id="bk-re-err" role="alert" aria-live="assertive"></div>
                     <div class="booking-foot">
                       <button class="btn-2" onclick="hideReschedulePanel()">Back</button>
                       <button class="send-btn-wide" id="bk-re-submit-btn" onclick="submitReschedule()">Confirm New Time</button>
@@ -1187,6 +1197,7 @@ const COPY = {
     bkLookupBtn: 'Find My Appointment',
     bkLookupErrNotFound: 'No appointment found with that ID and email.',
     bkLookupErrGeneric: 'Something went wrong looking that up. Please try again.',
+    bkLookupErrRequired: 'Please enter both your appointment ID and email.',
     bkFindDifferent: 'Look up a different appointment',
     bkCancelApptBtn: 'Cancel Appointment',
     bkRescheduleBtn: 'Reschedule',
@@ -1248,6 +1259,7 @@ const COPY = {
     bkLookupBtn: 'ابحث عن موعدي',
     bkLookupErrNotFound: 'لم يتم العثور على موعد بهذا الرقم والبريد الإلكتروني.',
     bkLookupErrGeneric: 'حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.',
+    bkLookupErrRequired: 'يرجى إدخال رقم الموعد والبريد الإلكتروني.',
     bkFindDifferent: 'ابحث عن موعد آخر',
     bkCancelApptBtn: 'إلغاء الموعد',
     bkRescheduleBtn: 'إعادة الجدولة',
@@ -1586,9 +1598,14 @@ function closeChat() {
   // it repeatedly re-imposed on them).
 }
 
-// Close chat on ESC
+// Close booking panel or chat on ESC (booking panel takes priority since
+// it sits on top of the chat — otherwise ESC would close the whole chat
+// out from under an open booking form instead of just backing out of it).
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && chatOpen) closeChat();
+  if (e.key !== 'Escape') return;
+  const bookingOpen = document.getElementById('booking-panel').classList.contains('open');
+  if (bookingOpen) { closeBooking(); return; }
+  if (chatOpen) closeChat();
 });
 
 // ── Render helpers ────────────────────────────────────────
@@ -1840,6 +1857,7 @@ function toggleLang() {
 // transcript, so the booking stays "synced" with the conversation itself. ──
 let pickedRescheduleSlot = null;
 let currentManagedAppt = null;
+let bookingOpenerEl = null;
 
 function fmtWhen(iso, label) {
   const dt = new Date(iso);
@@ -1889,8 +1907,12 @@ function bkText() {
 }
 
 function switchBkTab(tab) {
-  document.getElementById('bk-tab-new').classList.toggle('active', tab === 'new');
-  document.getElementById('bk-tab-manage').classList.toggle('active', tab === 'manage');
+  const newTab = document.getElementById('bk-tab-new');
+  const manageTab = document.getElementById('bk-tab-manage');
+  newTab.classList.toggle('active', tab === 'new');
+  manageTab.classList.toggle('active', tab === 'manage');
+  newTab.setAttribute('aria-selected', tab === 'new' ? 'true' : 'false');
+  manageTab.setAttribute('aria-selected', tab === 'manage' ? 'true' : 'false');
   document.getElementById('bk-new-view').style.display = tab === 'new' ? 'block' : 'none';
   document.getElementById('bk-manage-view').style.display = tab === 'manage' ? 'block' : 'none';
   document.getElementById('bk-success').style.display = 'none';
@@ -1930,11 +1952,21 @@ function openBooking() {
   document.getElementById('bk-date').min = today;
   document.getElementById('bk-re-date').min = today;
   resetManageView();
+  // Remember whatever had focus (the "Talk to Us" chip or CTA button) so
+  // closeBooking() can return focus there — otherwise keyboard/screen-reader
+  // focus is left on an element that's now hidden behind the panel, or
+  // silently reset to <body>.
+  bookingOpenerEl = document.activeElement;
   document.getElementById('booking-panel').classList.add('open');
+  // Move focus into the panel itself so keyboard and screen-reader users
+  // land inside the dialog instead of on a chat message behind it.
+  setTimeout(() => document.getElementById('bk-date').focus(), 50);
 }
 
 function closeBooking() {
   document.getElementById('booking-panel').classList.remove('open');
+  if (bookingOpenerEl && typeof bookingOpenerEl.focus === 'function') bookingOpenerEl.focus();
+  bookingOpenerEl = null;
 }
 
 async function loadSlots() {
@@ -1953,11 +1985,14 @@ async function loadSlots() {
     slots.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'bk-slot';
+      btn.type = 'button';
+      btn.setAttribute('aria-pressed', 'false');
       btn.textContent = s.label;
       btn.onclick = () => {
         pickedSlot = s;
-        slotsEl.querySelectorAll('.bk-slot').forEach(b => b.classList.remove('picked'));
+        slotsEl.querySelectorAll('.bk-slot').forEach(b => { b.classList.remove('picked'); b.setAttribute('aria-pressed', 'false'); });
         btn.classList.add('picked');
+        btn.setAttribute('aria-pressed', 'true');
       };
       slotsEl.appendChild(btn);
     });
@@ -2040,7 +2075,7 @@ async function lookupAppointment() {
   const errEl = document.getElementById('bk-lookup-err');
   const id = document.getElementById('bk-lookup-id').value.trim();
   const email = document.getElementById('bk-lookup-email').value.trim();
-  if (!id || !email) { errEl.textContent = c.bkLookupErrNotFound; return; }
+  if (!id || !email) { errEl.textContent = c.bkLookupErrRequired; return; }
   errEl.textContent = '';
 
   const btn = document.getElementById('bk-lookup-btn');
@@ -2102,11 +2137,14 @@ async function loadRescheduleSlots() {
     slots.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'bk-slot';
+      btn.type = 'button';
+      btn.setAttribute('aria-pressed', 'false');
       btn.textContent = s.label;
       btn.onclick = () => {
         pickedRescheduleSlot = s;
-        slotsEl.querySelectorAll('.bk-slot').forEach(b => b.classList.remove('picked'));
+        slotsEl.querySelectorAll('.bk-slot').forEach(b => { b.classList.remove('picked'); b.setAttribute('aria-pressed', 'false'); });
         btn.classList.add('picked');
+        btn.setAttribute('aria-pressed', 'true');
       };
       slotsEl.appendChild(btn);
     });
