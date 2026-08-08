@@ -129,15 +129,20 @@ real cert/key files and let it bind 443 directly.
 
 ## Operational notes
 
-- **Back up `data/`.** It's the only state the app has (config,
-  knowledge base, appointments, daily stats). It's plain JSON, so
-  `cp -r data/ backup/` is a complete backup.
-- **Single-instance only, as written.** Config/knowledge-base/appointment
-  writes use atomic file replacement, which is safe for one process but
-  not for multiple app instances behind a load balancer editing the same
-  files. If you outgrow a single instance, move `storage.py` onto a real
-  database (Postgres/SQLite) — everything else calls through that one
-  module, so it's a contained change.
+- **State lives in this instance's own MySQL database, not local
+  files.** `DATABASE_URL`/`DB_TABLE_PREFIX` (both required, provisioned
+  by SiteHub's paid-tier pipeline — see `.env.example`) point at a
+  dedicated per-tenant database; back that up the normal MySQL way
+  (`mysqldump`, a managed provider's snapshotting, etc.), not by
+  copying a local directory.
+- **No longer single-instance-only.** The pre-MySQL version of this app
+  used local JSON files with atomic replacement, which was safe for one
+  process but not for multiple instances editing the same files — that
+  constraint is gone now that storage is MySQL, which handles concurrent
+  writers correctly on its own. This app still runs as a single PM2
+  process in practice (`ecosystem.config.js`), but that's now an
+  operational choice for this deployment model, not a correctness
+  requirement.
 - **`/health`** returns `{"ok": true}` for uptime checks / load balancer
   health probes.
 - Logs go to stdout — capture them with your process manager or

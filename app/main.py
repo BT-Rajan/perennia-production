@@ -42,50 +42,14 @@ from app.logging_config import configure_app_logging
 configure_app_logging()
 log = logging.getLogger("perennia")
 
-# ── Single-instance lock ────────────────────────────────────────────
-# Storage is local JSON files, not a shared DB (see storage.py) — two
-# processes writing the same data directory at once would silently
-# corrupt it. Take an exclusive lock on a marker file in DATA_DIR for
-# the life of the process; refuse to start if another instance already
-# holds it. POSIX uses flock; Windows uses msvcrt's file-region locking
-# (the same file, locked the OS-appropriate way) so this still works
-# under install.bat/start.bat deployments.
-def _acquire_instance_lock() -> None:
-    settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
-    lock_path = settings.DATA_DIR / ".instance_lock"
-    try:
-        fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR, 0o666)
-    except OSError as e:
-        log.error("FATAL: could not open instance lock file %s: %s", lock_path, e)
-        sys.exit(1)
-
-    try:
-        if os.name == "nt":
-            import msvcrt
-            try:
-                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
-            except OSError:
-                raise
-        else:
-            import fcntl
-            try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except OSError:
-                raise
-    except OSError:
-        log.error(
-            "FATAL: another Perennia instance already has %s open. "
-            "Running multiple instances against the same data directory "
-            "is not supported (would corrupt the local JSON storage).",
-            lock_path,
-        )
-        os.close(fd)
-        sys.exit(1)
-    # Intentionally leak `fd` open for the lifetime of the process — the
-    # OS releases the lock automatically when the process exits.
-
-
-_acquire_instance_lock()
+# NOTE: the single-instance file lock that used to live here was removed
+# in the MySQL storage port (see app/storage.py) — its entire
+# justification was "storage is local JSON files, two processes writing
+# the same data directory at once would corrupt it", which is no longer
+# true once storage is MySQL (which handles concurrent writers safely on
+# its own). This instance still runs as a single PM2 process in practice
+# (ecosystem.config.js), but that's now an operational choice about this
+# deployment model, not a correctness requirement enforced here.
 
 limiter = Limiter(key_func=get_remote_address)
 

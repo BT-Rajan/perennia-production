@@ -43,9 +43,43 @@ def _validate_timezone(tz_name: str) -> str:
     return tz_name
 
 
+def _validate_table_prefix(prefix: str) -> str:
+    """DB_TABLE_PREFIX is always provisioned by SiteHub's deploy pipeline,
+    never end-user input — but app/storage.py interpolates it directly
+    into table-name SQL identifiers (MySQL has no parameter binding for
+    identifiers), so validating the format here, at startup, is a
+    defense-in-depth backstop against that interpolation ever becoming
+    an injection point, matching the same guard SiteHub's own
+    app/tenant_db.py applies to this exact convention."""
+    import re
+    if not re.match(r"^[a-z0-9]{4}$", prefix):
+        print(f"FATAL: DB_TABLE_PREFIX '{prefix}' is invalid — must be exactly 4 lowercase alphanumeric characters.", file=sys.stderr)
+        sys.exit(1)
+    return prefix
+
+
 class Settings:
-    # Where config.json / knowledge_base.json live. MUST be outside of
-    # any directory served as static files.
+    # MySQL connection for this instance's own tenant database
+    # (provisioned by SiteHub's paid-tier pipeline before this app ever
+    # starts — see docs in the SiteHub repo's docs/architecture-v3.md
+    # §6.1/§6.5). Required: this app has no local-file fallback anymore
+    # (see app/storage.py) — a missing DATABASE_URL means it cannot run
+    # at all, so it fails fast at startup rather than starting up and
+    # failing confusingly on the first request.
+    DATABASE_URL: str = _get("DATABASE_URL", required=True)
+
+    # The 4-character per-tenant table prefix (matches SiteHub's
+    # DB-per-tenant table-prefix convention — every table THIS instance
+    # creates in its own database is named f"{DB_TABLE_PREFIX}_{name}").
+    # Also provisioned by SiteHub's pipeline, not chosen by this app.
+    DB_TABLE_PREFIX: str = _validate_table_prefix(_get("DB_TABLE_PREFIX", required=True))
+
+    # Historically held config.json/knowledge_base.json/appointments.json/
+    # leads.json/daily_stats.json — all now MySQL tables (app/storage.py).
+    # Kept defined (rather than removed outright) since scripts/install
+    # tooling and docs still reference it, and it costs nothing to leave
+    # available for any future local scratch use — but nothing in this
+    # app's own request-handling code reads or writes under it anymore.
     DATA_DIR: Path = Path(_get("DATA_DIR", str(BASE_DIR / "data")))
 
     # Directory of static, public assets (site HTML, images). Nothing

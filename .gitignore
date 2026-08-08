@@ -36,3 +36,6 @@ venv/
 *.log
 *.log.*
 logs/
+
+# Test cache
+.pytest_cache/
